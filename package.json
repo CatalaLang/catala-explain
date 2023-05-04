@@ -1,0 +1,29 @@
+{
+  "name": "@catala-lang/catala-explain",
+  "version": "0.1.0",
+  "description": "A module for explicability from the trace of a catala program",
+  "scripts": {
+    "clean": "rescript clean",
+    "build": "rescript build -with-deps",
+    "watch": "yarn run build -w"
+  },
+  "main": "index.js",
+  "repository": "git@github.com:CatalaLang/catala-explain.git",
+  "author": "Emile Rolley <emile.rolley@tuta.io>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/CatalaLang/catala-explain/issues"
+  },
+  "homepage": "https://github.com/CatalaLang/catala-explain#readme",
+  "keywords": [
+    "ReScript",
+    "catala",
+    "explain",
+    "trace"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@rescript/core": "^0.3.1",
+    "rescript": "^10.1.4"
+  }
+}

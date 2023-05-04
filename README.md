@@ -1,2 +1,3 @@
 # catala-explain
-A module of explicability from the trace of a catala program
+
+A module for explicability from the trace of a catala program
