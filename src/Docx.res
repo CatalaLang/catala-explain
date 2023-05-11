@@ -1,39 +1,90 @@
 type fileChild
 
+/** @see https://docx.js.org/api/types/ParagraphChild.html */
+type paragraphChild
+
 module Document = {
   type t
 
-  type section<'a> = {
-    properties?: option<'a>,
+  type section_properties = {}
+
+  type section = {
+    properties?: section_properties,
     children: array<fileChild>,
   }
 
-  type input<'a> = {sections: array<section<'a>>}
+  type input = {sections: array<section>}
 
-  @module("docx") @new external create: input<'a> => t = "Document"
+  @module("docx") @new
+  external create: input => t = "Document"
+}
+
+module HeadingLevel = {
+  type t
+
+  @module("docx") @val
+  external headingLevel: 'a = "HeadingLevel"
+
+  let h1 = headingLevel["HEADING_1"]
+  let h2 = headingLevel["HEADING_2"]
+  let h3 = headingLevel["HEADING_3"]
+  let h4 = headingLevel["HEADING_4"]
+  let h5 = headingLevel["HEADING_5"]
+  let title = headingLevel["TITLE"]
+}
+
+module TextRun = {
+  /** @see https://docx.js.org/api/interfaces/IRunOptions.html */
+  type options = {
+    text?: string,
+    allCaps?: bool,
+    bold?: bool,
+    break?: int,
+  }
+
+  @module("docx") @new
+  external create: string => paragraphChild = "TextRun"
+
+  @module("docx") @new
+  external create': options => paragraphChild = "TextRun"
 }
 
 module Paragraph = {
-  type input = {
+  type bullet = {level: int}
+
+  type options = {
     text?: string,
-    children?: array<fileChild>,
+    heading?: HeadingLevel.t,
+    // border?: border_options,
+    children?: array<paragraphChild>,
+    bullet?: bullet,
+    style?: string,
   }
 
-  @module("docx") @new external create: input => fileChild = "Paragraph"
+  type _options = {
+    text?: string,
+    heading?: int,
+    // border?: border_options,
+    children?: array<fileChild>,
+    bullet?: bullet,
+    style?: string,
+  }
+
+  @module("docx") @new
+  external create: string => fileChild = "Paragraph"
+
+  @module("docx") @new
+  external create': options => fileChild = "Paragraph"
 }
 
 type blob
 
 module Packer = {
-  type t
-
-  @module("docx") external packer: t = "Packer"
-
-  @send external toBlobBind: (t, Document.t) => promise<blob> = "toBlob"
-
-  let toBlob = (doc: Document.t) => toBlobBind(packer, doc)
+  @module("docx") @scope("Packer")
+  external toBlob: Document.t => promise<blob> = "toBlob"
 }
 
 module FileSaver = {
-  @module("file-saver") external saveAs: (blob, string) => unit = "saveAs"
+  @module("file-saver")
+  external saveAs: (blob, string) => unit = "saveAs"
 }
