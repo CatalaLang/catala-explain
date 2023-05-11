@@ -16,7 +16,8 @@
   "refmt": 3,
   "jsx": { "version": 4, "mode": "classic" },
   "bs-dependencies": [
-    "@rescript/core"
+    "@rescript/core",
+    "@catala-lang/rescript-catala"
   ],
   "bsc-flags": [
     "-open RescriptCore"

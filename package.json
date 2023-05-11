@@ -21,8 +21,8 @@
     "explain",
     "trace"
   ],
-  "dependencies": {},
   "devDependencies": {
+    "@catala-lang/rescript-catala": "^0.8.0",
     "@rescript/core": "^0.3.1",
     "rescript": "^10.1.4"
   }

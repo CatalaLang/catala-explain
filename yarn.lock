@@ -2,10 +2,23 @@
 # yarn lockfile v1
 
 
+"@catala-lang/rescript-catala@^0.8.0":
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/@catala-lang/rescript-catala/-/rescript-catala-0.8.0.tgz#529812bdfea3861b0c61e5395cd45727687eab84"
+  integrity sha512-nk/Df96HmhqKd5+20jVzJujBNytQGz7G04k5bLahOi6fca6XANJbcdnXsVtgl9qaN/uKUub8GGVGheFuL+15cQ==
+  dependencies:
+    decco "^1.6.0"
+    rescript "^10.1.4"
+
 "@rescript/core@^0.3.1":
   version "0.3.1"
   resolved "https://registry.yarnpkg.com/@rescript/core/-/core-0.3.1.tgz#4c6bdf35e836f10ed6022ed11d81985394fe73db"
   integrity sha512-H6KgYKCpaWQEyhl/r3HuTxY0y1pvQziMXbZnwHVsykNkJvxpROMOrAX2CkIJ5lIar3zDH33cPpwTsIxANTFcvQ==
+
+decco@^1.6.0:
+  version "1.6.0"
+  resolved "https://registry.yarnpkg.com/decco/-/decco-1.6.0.tgz#79a07d518691f92519066a067b77f04ce89b4896"
+  integrity sha512-gdeDDPOh45Hz8YGvTkDP7ySo3Ll3ty+KfuFj21+jRbiCoE8HTCNB++pozCiMljxJx39CfvrHRYBY5FO5PMyXzw==
 
 rescript@^10.1.4:
   version "10.1.4"
