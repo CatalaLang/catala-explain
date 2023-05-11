@@ -24,6 +24,10 @@
   "devDependencies": {
     "@catala-lang/rescript-catala": "^0.8.0",
     "@rescript/core": "^0.3.1",
+    "file-saver": "^2.0.5",
     "rescript": "^10.1.4"
+  },
+  "dependencies": {
+    "docx": "^8.0.4"
   }
 }
