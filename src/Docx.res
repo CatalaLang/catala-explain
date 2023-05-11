@@ -1,8 +1,25 @@
+type fileChild
+
 module Document = {
   type t
-  type input<'a> = {sections: array<'a>}
+
+  type section<'a> = {
+    properties?: option<'a>,
+    children: array<fileChild>,
+  }
+
+  type input<'a> = {sections: array<section<'a>>}
 
   @module("docx") @new external create: input<'a> => t = "Document"
+}
+
+module Paragraph = {
+  type input = {
+    text?: string,
+    children?: array<fileChild>,
+  }
+
+  @module("docx") @new external create: input => fileChild = "Paragraph"
 }
 
 type blob
