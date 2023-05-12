@@ -34,3 +34,7 @@ let findTitleInSchema = (key: string, jsonSchema: JSON.t): string => {
   ->Option.flatMap(JSON.Decode.string)
   ->Option.getWithDefault(key)
 }
+
+let isDate = (str: string): bool => {
+  str->Date.fromString->Date.toString != "Invalid Date"
+}

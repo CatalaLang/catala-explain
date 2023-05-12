@@ -14,17 +14,38 @@ let rec eventToFileChild = (event: CatalaRuntime.event) => {
   }
 }
 
-let userInputsToFileChild = (userInputs: JSON.t, jsonSchema: JSON.t): array<fileChild> => {
-  let primitiveToString = (input: JSON.t) => {
-    switch JSON.Classify.classify(input) {
-    | Bool(b) =>
-      // TODO: manage the language
-      b ? "vrai" : "faux"
-    | Number(f) => f->Float.toString
-    | String(s) => s
-    | Null | Object(_) | Array(_) => "Aucune entrée"
+let valueToStyledTextRun = (value: JSON.t): Docx.paragraphChild => {
+  switch JSON.Classify.classify(value) {
+  | Bool(b) =>
+    // TODO: manage the language
+    TextRun.create'({
+      text: b ? "vrai" : "faux",
+      style: "BooleanLiteral",
+    })
+  | Number(f) =>
+    TextRun.create'({
+      text: f->Float.toString,
+      style: "NumberLiteral",
+    })
+  | String(s) =>
+    if isDate(s) {
+      TextRun.create'({
+        text: s
+        ->Date.fromString
+        ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long}),
+        style: "DateLiteral",
+      })
+    } else {
+      TextRun.create'({
+        text: s,
+        style: "StringLiteral",
+      })
     }
+  | Null | Object(_) | Array(_) => TextRun.create'({text: "Aucune entrée", style: "EmptyLiteral"})
   }
+}
+
+let userInputsToFileChild = (userInputs: JSON.t, jsonSchema: JSON.t): array<fileChild> => {
   let rec aux = (userInputs: JSON.t, level: int) => {
     switch JSON.Classify.classify(userInputs) {
     | Object(fields) =>
@@ -35,16 +56,8 @@ let userInputsToFileChild = (userInputs: JSON.t, jsonSchema: JSON.t): array<file
         if isPrimitive(value) || isEmpty(value) {
           [
             Paragraph.create'({
+              children: [TextRun.create(`${inputName} : `), valueToStyledTextRun(value)],
               bullet: {level: level},
-              children: [
-                TextRun.create(`${inputName} : `),
-                TextRun.create'({
-                  text: primitiveToString(value),
-                  font: "Fira Mono",
-                  bold: isPrimitive(value),
-                  italics: isEmpty(value),
-                }),
-              ],
             }),
           ]
         } else {
@@ -105,6 +118,69 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
         children: events->Array.flatMap(eventToFileChild),
       },
     ],
+    styles: {
+      characterStyles: [
+        {
+          id: "BooleanLiteral",
+          name: "BooleanLiteral",
+          basedOn: "Normal",
+          next: "Normal",
+          quickFormat: true,
+          run: {
+            font: "Fira Mono",
+            bold: true,
+            color: "BA2121",
+          },
+        },
+        {
+          id: "NumberLiteral",
+          name: "NumberLiteral",
+          basedOn: "Normal",
+          next: "Normal",
+          quickFormat: true,
+          run: {
+            font: "Fira Mono",
+            bold: true,
+            color: "008000",
+          },
+        },
+        {
+          id: "StringLiteral",
+          name: "StringLiteral",
+          basedOn: "Normal",
+          next: "Normal",
+          quickFormat: true,
+          run: {
+            font: "Fira Mono",
+            bold: true,
+            color: "BB0066",
+          },
+        },
+        {
+          id: "DateLiteral",
+          name: "DateLiteral",
+          basedOn: "Normal",
+          next: "Normal",
+          quickFormat: true,
+          run: {
+            font: "Fira Mono",
+            bold: true,
+            color: "0000FF",
+          },
+        },
+        {
+          id: "EmptyLiteral",
+          name: "EmptyLiteral",
+          basedOn: "Normal",
+          next: "Normal",
+          quickFormat: true,
+          run: {
+            font: "Fira Mono",
+            italics: true,
+          },
+        },
+      ],
+    },
   })
   ->Packer.toBlob
   ->thenResolve(blob => {

@@ -3,27 +3,6 @@ type fileChild
 /** @see https://docx.js.org/api/types/ParagraphChild.html */
 type paragraphChild
 
-module Document = {
-  type t
-
-  type section_properties = {}
-
-  type section = {
-    properties?: section_properties,
-    children: array<fileChild>,
-  }
-
-  type options = {
-    creator?: string,
-    description?: string,
-    title?: string,
-    sections: array<section>,
-  }
-
-  @module("docx") @new
-  external create: options => t = "Document"
-}
-
 module HeadingLevel = {
   type t
 
@@ -48,6 +27,8 @@ module TextRun = {
     italics?: bool,
     font?: string,
     size?: int,
+    style?: string,
+    color?: string,
   }
 
   @module("docx") @new
@@ -97,6 +78,39 @@ module Paragraph = {
 
   @module("docx") @new
   external create': options => fileChild = "Paragraph"
+}
+
+module Document = {
+  type t
+
+  type section_properties = {}
+
+  type section = {
+    properties?: section_properties,
+    children: array<fileChild>,
+  }
+
+  type style = {
+    id: string,
+    name: string,
+    basedOn?: string,
+    next?: string,
+    quickFormat?: bool,
+    run?: TextRun.options,
+    paragraph?: Paragraph.options,
+  }
+  type styles = {paragraphStyles?: array<style>, characterStyles?: array<style>}
+
+  type options = {
+    creator?: string,
+    description?: string,
+    title?: string,
+    styles?: styles,
+    sections: array<section>,
+  }
+
+  @module("docx") @new
+  external create: options => t = "Document"
 }
 
 type blob
