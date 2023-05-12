@@ -14,6 +14,7 @@ module HeadingLevel = {
   let h3 = headingLevel["HEADING_3"]
   let h4 = headingLevel["HEADING_4"]
   let h5 = headingLevel["HEADING_5"]
+  let h6 = headingLevel["HEADING_6"]
   let title = headingLevel["TITLE"]
 }
 

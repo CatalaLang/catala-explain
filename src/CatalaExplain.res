@@ -2,6 +2,84 @@ open Docx
 open Promise
 open Utils
 
+let litToStyledTextRun = (lit: UserInputs.t): Docx.paragraphChild => {
+  switch lit {
+  | LitBool(b) =>
+    // TODO: manage the language
+    TextRun.create'({
+      text: b ? "vrai" : "faux",
+      style: "BooleanLiteral",
+    })
+  | LitNumber(f) =>
+    TextRun.create'({
+      text: f->Float.toString,
+      style: "NumberLiteral",
+    })
+  | LitDate(d) =>
+    TextRun.create'({
+      text: d
+      ->Date.fromString
+      ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long}),
+      style: "DateLiteral",
+    })
+  | LitString(s) =>
+    TextRun.create'({
+      text: s,
+      style: "StringLiteral",
+    })
+  | LitEnum(name) =>
+    TextRun.create'({
+      text: name,
+      style: "EnumLiteral",
+    })
+  | LitNull => TextRun.create'({text: "Aucune entrée", style: "EmptyLiteral"})
+  | _ => failwith("invalid user inputs in [litToStyledTextRun]")
+  }
+}
+
+let userInputsToFileChild = (userInputs: UserInputs.t, _jsonSchema: JSON.t): array<fileChild> => {
+  let rec aux = (userInputs: UserInputs.t, level: HeadingLevel.t) => {
+    switch userInputs {
+    | Section({title, items}) =>
+      [
+        Paragraph.create'({
+          children: [TextRun.create(title)],
+          heading: level,
+        }),
+      ]->Array.concat(aux(items, getNextHeadingLevel(level)))
+    | Array(inputs) =>
+      // Need to have dot list ?
+      inputs->Array.flatMap(input => aux(input, getNextHeadingLevel(level)))
+    | Fields(items) =>
+      items
+      ->Array.sort((a, b) => {
+        // Display section last
+        switch (a, b) {
+        | (Section(_), _) | (_, Section(_)) => -1
+        | (Array(_), _) | (_, Array(_)) => -1
+        | _ => 1
+        }
+      })
+      ->Array.flatMap(input => aux(input, getNextHeadingLevel(level)))
+    | Field({name, value}) if UserInputs.isLiteral(value) => [
+        Paragraph.create'({
+          children: [TextRun.create(`${name} : `), litToStyledTextRun(value)],
+        }),
+      ]
+    | Field({value}) if UserInputs.isEmpty(value) => []
+    | Field({name, value}) =>
+      [
+        Paragraph.create'({
+          children: [TextRun.create(name)],
+          heading: level,
+        }),
+      ]->Array.concat(aux(value, getNextHeadingLevel(level)))
+    | _ => failwith("invalid user inputs in [userInputsToFileChild]")
+    }
+  }
+  aux(userInputs, HeadingLevel.h2)
+}
+
 let rec eventToFileChild = (event: CatalaRuntime.event) => {
   open CatalaRuntime
 
@@ -14,68 +92,6 @@ let rec eventToFileChild = (event: CatalaRuntime.event) => {
   }
 }
 
-let valueToStyledTextRun = (value: JSON.t): Docx.paragraphChild => {
-  switch JSON.Classify.classify(value) {
-  | Bool(b) =>
-    // TODO: manage the language
-    TextRun.create'({
-      text: b ? "vrai" : "faux",
-      style: "BooleanLiteral",
-    })
-  | Number(f) =>
-    TextRun.create'({
-      text: f->Float.toString,
-      style: "NumberLiteral",
-    })
-  | String(s) =>
-    if isDate(s) {
-      TextRun.create'({
-        text: s
-        ->Date.fromString
-        ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long}),
-        style: "DateLiteral",
-      })
-    } else {
-      TextRun.create'({
-        text: s,
-        style: "StringLiteral",
-      })
-    }
-  | Null | Object(_) | Array(_) => TextRun.create'({text: "Aucune entrée", style: "EmptyLiteral"})
-  }
-}
-
-let userInputsToFileChild = (userInputs: JSON.t, jsonSchema: JSON.t): array<fileChild> => {
-  let rec aux = (userInputs: JSON.t, level: int) => {
-    switch JSON.Classify.classify(userInputs) {
-    | Object(fields) =>
-      fields
-      ->Dict.toArray
-      ->Array.flatMap(((key, value)) => {
-        let inputName = key->findTitleInSchema(jsonSchema)
-        if isPrimitive(value) || isEmpty(value) {
-          [
-            Paragraph.create'({
-              children: [TextRun.create(`${inputName} : `), valueToStyledTextRun(value)],
-              bullet: {level: level},
-            }),
-          ]
-        } else {
-          [
-            Paragraph.create'({
-              children: [TextRun.create(`${inputName} : `)],
-              bullet: {level: level},
-            }),
-          ]->Array.concat(aux(value, level + 1))
-        }
-      })
-    | Array(elems) => elems->Array.flatMap(elem => aux(elem, level))
-    | _ => failwith("should not happen")
-    }
-  }
-  aux(userInputs, 0)
-}
-
 type options = {
   title?: string,
   creator?: string,
@@ -85,6 +101,7 @@ type options = {
 }
 
 let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntime.event>) => {
+  Console.log2("userInputs", userInputs)
   Document.create({
     title: opts.title->Option.getUnsafe,
     creator: opts.creator->Option.getUnsafe,
@@ -109,7 +126,11 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
           Paragraph.create'({text: "Entrées du programme", heading: HeadingLevel.h1}),
         ]->Array.concat(
           userInputsToFileChild(
-            userInputs,
+            UserInputs.fromJSON(
+              userInputs,
+              opts.jsonSchema->Option.getWithDefault(JSON.Encode.null),
+            ),
+            // Should not be needed
             opts.jsonSchema->Option.getWithDefault(JSON.Encode.null),
           ),
         ),
@@ -147,6 +168,18 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
         {
           id: "StringLiteral",
           name: "StringLiteral",
+          basedOn: "Normal",
+          next: "Normal",
+          quickFormat: true,
+          run: {
+            font: "Fira Mono",
+            bold: true,
+            color: "BB0066",
+          },
+        },
+        {
+          id: "EnumLiteral",
+          name: "EnumLiteral",
           basedOn: "Normal",
           next: "Normal",
           quickFormat: true,
