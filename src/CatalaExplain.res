@@ -1,5 +1,6 @@
 open Docx
 open Promise
+open Utils
 
 let rec eventToFileChild = (event: CatalaRuntime.event) => {
   open CatalaRuntime
@@ -13,14 +14,7 @@ let rec eventToFileChild = (event: CatalaRuntime.event) => {
   }
 }
 
-let isPrimitive = (input: JSON.t) => {
-  switch JSON.Classify.classify(input) {
-  | Object(_) | Array(_) => false
-  | _ => true
-  }
-}
-
-let userInputsToFileChild = (userInputs: JSON.t) => {
+let userInputsToFileChild = (userInputs: JSON.t, jsonSchema: JSON.t): array<fileChild> => {
   let primitiveToString = (input: JSON.t) => {
     switch JSON.Classify.classify(input) {
     | Bool(b) =>
@@ -28,52 +22,93 @@ let userInputsToFileChild = (userInputs: JSON.t) => {
       b ? "vrai" : "faux"
     | Number(f) => f->Float.toString
     | String(s) => s
-    | Null => ""
-    | _ => failwith("Not a primitive")
+    | Null | Object(_) | Array(_) => "Aucune entrée"
     }
   }
-  let rec aux = (userInputs: JSON.t) => {
-    Console.log2("aux.userInputs: ", userInputs)
+  let rec aux = (userInputs: JSON.t, level: int) => {
     switch JSON.Classify.classify(userInputs) {
     | Object(fields) =>
       fields
       ->Dict.toArray
       ->Array.flatMap(((key, value)) => {
-        if isPrimitive(value) {
-          [TextRun.create(key ++ " : " ++ primitiveToString(value))]
+        let inputName = key->findTitleInSchema(jsonSchema)
+        if isPrimitive(value) || isEmpty(value) {
+          [
+            Paragraph.create'({
+              bullet: {level: level},
+              children: [
+                TextRun.create(`${inputName} : `),
+                TextRun.create'({
+                  text: primitiveToString(value),
+                  font: "Fira Mono",
+                  bold: isPrimitive(value),
+                  italics: isEmpty(value),
+                }),
+              ],
+            }),
+          ]
         } else {
-          Console.log2("got: ", value)
-          [TextRun.create(key ++ " : ")]->Array.concat(aux(value))
+          [
+            Paragraph.create'({
+              children: [TextRun.create(`${inputName} : `)],
+              bullet: {level: level},
+            }),
+          ]->Array.concat(aux(value, level + 1))
         }
       })
-    | Array([]) => [TextRun.create("Aucune entrée")]
-    | Array(elems) => elems->Array.flatMap(aux)
+    | Array(elems) => elems->Array.flatMap(elem => aux(elem, level))
     | _ => failwith("should not happen")
     }
   }
-  aux(userInputs)
+  aux(userInputs, 0)
 }
 
-let generate = (~userInputs: JSON.t, ~events: array<CatalaRuntime.event>) => {
-  Console.log(userInputs)
-  let doc = Document.create({
+type options = {
+  title?: string,
+  creator?: string,
+  description?: string,
+  filename: string,
+  jsonSchema?: JSON.t,
+}
+
+let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntime.event>) => {
+  Document.create({
+    title: opts.title->Option.getUnsafe,
+    creator: opts.creator->Option.getUnsafe,
+    description: opts.description->Option.getUnsafe,
     sections: [
+      // {
+      //   children: [
+      //     Paragraph.create'({
+      //       text: opts.title->Option.getWithDefault("Explication individuelle du calcul"),
+      //       heading: HeadingLevel.title,
+      //       alignment: AlignmentType.center,
+      //     }),
+      //     Paragraph.create'({
+      //       text: opts.description->Option.getUnsafe,
+      //       heading: HeadingLevel.h2,
+      //       alignment: AlignmentType.center,
+      //     }),
+      //   ],
+      // },
       {
         children: [
           Paragraph.create'({text: "Entrées du programme", heading: HeadingLevel.h1}),
-          Paragraph.create'({children: userInputsToFileChild(userInputs)}),
-        ],
+        ]->Array.concat(
+          userInputsToFileChild(
+            userInputs,
+            opts.jsonSchema->Option.getWithDefault(JSON.Encode.null),
+          ),
+        ),
       },
       {
         children: events->Array.flatMap(eventToFileChild),
       },
     ],
   })
-  doc
   ->Packer.toBlob
   ->thenResolve(blob => {
-    Console.log(blob)
-    FileSaver.saveAs(blob, "example.docx")
+    FileSaver.saveAs(blob, `${opts.filename}.docx`)
   })
   ->ignore
 }
