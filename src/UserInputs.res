@@ -28,7 +28,7 @@ let rec isEmpty = (t: t): bool => {
   }
 }
 
-let getKindName = (obj: JSON.t): string => {
+let getKindName = (obj: JSON.t, _schema: JSON.t): string => {
   switch JSON.Classify.classify(obj) {
   | Object(items) =>
     switch items->Dict.get("default") {
@@ -40,12 +40,8 @@ let getKindName = (obj: JSON.t): string => {
   }
 }
 
-// let retrieveKindTitleFromSchema = (obj: JSON.t, schema: JSON.t): string => {
-//   failwith("TODO")
-// }
-
-let rec fromJSON = (json: JSON.t, schema: JSON.t): t => {
-  Console.log2("fromJSON", json)
+let rec fromJSON = (json: JSON.t, schema: JSON.t, currentPath: list<string>): t => {
+  Console.log2("currentPath", currentPath)
   switch JSON.Classify.classify(json) {
   | Object(items) =>
     switch (items->Dict.get("kind"), items->Dict.get("payload")) {
@@ -54,18 +50,22 @@ let rec fromJSON = (json: JSON.t, schema: JSON.t): t => {
         items
         ->Dict.toArray
         ->Array.map(((key, value)) => {
-          let name = key->findTitleInSchema(schema)
-          Field({name, value: value->fromJSON(schema)})
+          let newPath = currentPath->List.concat(list{key})
+          let name = newPath->findTitleInSchema(schema)
+          Field({name, value: value->fromJSON(schema, newPath)})
         }),
       )
-    | (Some(kindVal), None) => LitEnum(getKindName(kindVal))
+    | (Some(kindVal), None) => LitEnum(kindVal->getKindName(schema))
     | (Some(kindVal), Some(payload)) =>
-      Section({title: getKindName(kindVal), items: payload->fromJSON(schema)})
+      Section({
+        title: kindVal->getKindName(schema),
+        items: payload->fromJSON(schema, currentPath),
+      })
     | _ => failwith("invalid user inputs in [fromJSON]")
     }
   | Array(items) =>
     // TODO: add section for each item
-    Array(items->Array.map(item => item->fromJSON(schema)))
+    Array(items->Array.map(item => item->fromJSON(schema, currentPath)))
   | String(s) =>
     if isDate(s) {
       LitDate(s)

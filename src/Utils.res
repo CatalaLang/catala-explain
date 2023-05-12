@@ -30,11 +30,41 @@ let rec jsonGetPath = (json: JSON.t, path: list<string>): option<JSON.t> => {
   }
 }
 
-// TODO: manage enums and refs in schema
-let findTitleInSchema = (key: string, jsonSchema: JSON.t): string => {
-  jsonGetPath(jsonSchema, list{"properties", key, "title"})
+let lastExn = (l: list<'a>): 'a => l->List.reverse->List.headExn
+
+// TODO: manage enums in schema
+let findTitleInSchema = (keys: list<string>, jsonSchema: JSON.t): string => {
+  let prop = jsonGetPath(jsonSchema, list{"properties", keys->List.headExn})
+
+  let rec followRef = fields => {
+    switch (fields->Dict.get("$ref"), fields->Dict.get("items")) {
+    | (Some(ref), _) =>
+      let path =
+        ref
+        ->JSON.Decode.string
+        ->Option.getExn
+        ->String.split("/")
+        ->List.fromArray
+        ->List.tailExn
+        ->List.concat(list{"properties", keys->lastExn, "title"})
+      jsonGetPath(jsonSchema, path)
+    | (_, Some(items)) => followRef(items->JSON.Decode.object->Option.getExn)
+    | _ => Dict.get(fields, "title")
+    }
+  }
+
+  switch JSON.Classify.classify(prop) {
+  | Object(fields) =>
+    switch Dict.get(fields, "title") {
+    | None => followRef(fields)
+    | Some(title) if title->JSON.Decode.string == Some(" ") || keys->List.length > 1 =>
+      followRef(fields)
+    | title => title
+    }
+  | _ => None
+  }
   ->Option.flatMap(JSON.Decode.string)
-  ->Option.getWithDefault(key)
+  ->Option.getWithDefault(keys->lastExn)
 }
 
 let isDate = (str: string): bool => {

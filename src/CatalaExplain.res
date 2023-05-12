@@ -129,6 +129,7 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
             UserInputs.fromJSON(
               userInputs,
               opts.jsonSchema->Option.getWithDefault(JSON.Encode.null),
+              list{},
             ),
             // Should not be needed
             opts.jsonSchema->Option.getWithDefault(JSON.Encode.null),
