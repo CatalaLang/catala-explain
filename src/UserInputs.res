@@ -41,7 +41,6 @@ let getKindName = (obj: JSON.t, _schema: JSON.t): string => {
 }
 
 let rec fromJSON = (json: JSON.t, schema: JSON.t, currentPath: list<string>): t => {
-  Console.log2("currentPath", currentPath)
   switch JSON.Classify.classify(json) {
   | Object(items) =>
     switch (items->Dict.get("kind"), items->Dict.get("payload")) {
@@ -52,10 +51,14 @@ let rec fromJSON = (json: JSON.t, schema: JSON.t, currentPath: list<string>): t 
         ->Array.map(((key, value)) => {
           let newPath = currentPath->List.concat(list{key})
           let name = newPath->findTitleInSchema(schema)
-          Field({name, value: value->fromJSON(schema, newPath)})
+
+          // FIXME: should correctly extract the name from the schema
+          Field({name: name == " " ? key : name, value: value->fromJSON(schema, newPath)})
         }),
       )
     | (Some(kindVal), None) => LitEnum(kindVal->getKindName(schema))
+    | (Some(kindVal), Some(payload)) if isEmptyJSON(payload) || isNullJSON(payload) =>
+      LitEnum(kindVal->getKindName(schema))
     | (Some(kindVal), Some(payload)) =>
       Section({
         title: kindVal->getKindName(schema),

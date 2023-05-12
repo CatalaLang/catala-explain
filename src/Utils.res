@@ -7,17 +7,17 @@ open Docx
 //   }
 // }
 //
-// let isEmpty = (inputs: JSON.t): bool => {
-//   switch JSON.Classify.classify(inputs) {
-//   | Object(fields) => Dict.toArray(fields) == []
-//   | Array([]) => true
-//   | _ => false
-//   }
-// }
-//
-// let isNull = (input: JSON.t): bool => {
-//   input->JSON.Classify.classify == Null
-// }
+let isEmptyJSON = (inputs: JSON.t): bool => {
+  switch JSON.Classify.classify(inputs) {
+  | Object(fields) => Dict.toArray(fields) == []
+  | Array([]) => true
+  | _ => false
+  }
+}
+
+let isNullJSON = (input: JSON.t): bool => {
+  input->JSON.Classify.classify == Null
+}
 
 let rec jsonGetPath = (json: JSON.t, path: list<string>): option<JSON.t> => {
   switch path {
@@ -71,17 +71,6 @@ let isDate = (str: string): bool => {
   str->Date.fromString->Date.toString != "Invalid Date"
 }
 
-// let isEnum = (jsonSchema: JSON.t): bool => {
-//   switch jsonSchema {
-//   | Object(fields) =>
-//     switch Dict.get(fields, "kind") {
-//     | Some(_) => true
-//     | None => false
-//     }
-//   | _ => false
-//   }
-// }
-//
 let getNextHeadingLevel = (lvl: HeadingLevel.t): HeadingLevel.t => {
   open HeadingLevel
   switch lvl {
