@@ -1,5 +1,29 @@
 let characterStyles: array<Docx.Document.style> = [
   {
+    id: "ScopeName",
+    name: "ScopeName",
+    basedOn: "Normal",
+    next: "Normal",
+    quickFormat: true,
+    run: {
+      font: "Fira Mono",
+      bold: true,
+      color: "BB0066",
+    },
+  },
+  {
+    id: "VariableName",
+    name: "VariableName",
+    basedOn: "Normal",
+    next: "Normal",
+    quickFormat: true,
+    run: {
+      font: "Fira Mono",
+      bold: true,
+      color: "BB0066",
+    },
+  },
+  {
     id: "BooleanLiteral",
     name: "BooleanLiteral",
     basedOn: "Normal",

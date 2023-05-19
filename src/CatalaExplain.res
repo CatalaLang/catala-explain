@@ -24,6 +24,12 @@ let getUserInputDocSection = (~userInputs: JSON.t, ~jsonSchema: JSON.t): Documen
   }
 }
 
+let getResultDocSection = (explanationSectionMap: Explanations.sectionMap): Document.section => {
+  {
+    children: explanationSectionMap->Explanations.Docx.outputToFileChilds,
+  }
+}
+
 type options = {
   title?: string,
   creator?: string,
@@ -33,7 +39,7 @@ type options = {
 }
 
 let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntime.event>) => {
-  let explanationSectionMap = events->Explanations.parseSection
+  let explanationSectionMap = events->Explanations.fromEvents
   Console.log2("explanationSectionMap", explanationSectionMap)
   Document.create({
     title: opts.title->Option.getUnsafe,
@@ -58,6 +64,7 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
         ~userInputs,
         ~jsonSchema=opts.jsonSchema->Option.getWithDefault(JSON.Encode.null),
       ),
+      explanationSectionMap->getResultDocSection,
       {
         children: events->Array.flatMap(eventToFileChild),
       },
@@ -66,9 +73,9 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
       characterStyles: Styles.characterStyles,
     },
   })
-  // ->Packer.toBlob
-  // ->thenResolve(blob => {
-  //   FileSaver.saveAs(blob, `${opts.filename}.docx`)
-  // })
+  ->Packer.toBlob
+  ->thenResolve(blob => {
+    FileSaver.saveAs(blob, `${opts.filename}.docx`)
+  })
   ->ignore
 }

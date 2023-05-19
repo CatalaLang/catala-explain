@@ -1,12 +1,5 @@
 open Docx
 
-// let isPrimitive = (input: JSON.t): bool => {
-//   switch JSON.Classify.classify(input) {
-//   | Object(_) | Array(_) => false
-//   | _ => true
-//   }
-// }
-//
 let isEmptyJSON = (inputs: JSON.t): bool => {
   switch JSON.Classify.classify(inputs) {
   | Object(fields) => Dict.toArray(fields) == []
