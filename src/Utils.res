@@ -65,13 +65,13 @@ let isDate = (str: string): bool => {
 }
 
 let getNextHeadingLevel = (lvl: HeadingLevel.t): HeadingLevel.t => {
-  open HeadingLevel
   switch lvl {
-  | lvl if lvl == h1 => h2
-  | lvl if lvl == h2 => h3
-  | lvl if lvl == h3 => h4
-  | lvl if lvl == h4 => h5
-  | lvl if lvl == h5 => h6
-  | _ => h6
+  | #Title => #Heading1
+  | #Heading1 => #Heading2
+  | #Heading2 => #Heading3
+  | #Heading3 => #Heading4
+  | #Heading4 => #Heading5
+  | #Heading5 => #Heading6
+  | _ => #Heading6
   }
 }

@@ -3,21 +3,6 @@ type fileChild
 /** @see https://docx.js.org/api/types/ParagraphChild.html */
 type paragraphChild
 
-module HeadingLevel = {
-  type t
-
-  @module("docx") @val
-  external headingLevel: 'a = "HeadingLevel"
-
-  let h1 = headingLevel["HEADING_1"]
-  let h2 = headingLevel["HEADING_2"]
-  let h3 = headingLevel["HEADING_3"]
-  let h4 = headingLevel["HEADING_4"]
-  let h5 = headingLevel["HEADING_5"]
-  let h6 = headingLevel["HEADING_6"]
-  let title = headingLevel["TITLE"]
-}
-
 module TextRun = {
   /** @see https://docx.js.org/api/interfaces/IRunOptions.html */
   type options = {
@@ -40,25 +25,38 @@ module TextRun = {
 }
 
 module AlignmentType = {
-  /** @see https://docx.js.org/api/enums/AlignmentType.html */
-  type t
+  /** 
+   * @see https://docx.js.org/api/enums/AlignmentType.html 
+   *
+   * #both == JUSTIFIED
+   */
+  type t = [
+    | #start
+    | #center
+    | #end
+    | #both
+    | #distribute
+    | #left
+    | #right
+    | #both
+    | #mediumKashida
+    | #highKashida
+    | #lowKashida
+    | #thaiDistribute
+    | #numTab
+  ]
+}
 
-  @module("docx") @val
-  external alignmentType: 'a = "AlignmentType"
-
-  let both = alignmentType["BOTH"]
-  let center = alignmentType["CENTER"]
-  let distribute = alignmentType["DISTRIBUTE"]
-  let end = alignmentType["END"]
-  let highKashida = alignmentType["HIGH_KASHIDA"]
-  let justified = alignmentType["JUSTIFIED"]
-  let left = alignmentType["LEFT"]
-  let lowKashida = alignmentType["LOW_KASHIDA"]
-  let mediumKashida = alignmentType["MEDIUM_KASHIDA"]
-  let numTab = alignmentType["NUM_TAB"]
-  let right = alignmentType["RIGHT"]
-  let start = alignmentType["START"]
-  let thaiDistribute = alignmentType["THAI_DISTRIBUTE"]
+module HeadingLevel = {
+  type t = [
+    | #Heading1
+    | #Heading2
+    | #Heading3
+    | #Heading4
+    | #Heading5
+    | #Heading6
+    | #Title
+  ]
 }
 
 module Paragraph = {

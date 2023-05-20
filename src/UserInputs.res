@@ -164,6 +164,6 @@ module Docx = {
       | _ => failwith("invalid user inputs in [userInputsToFileChild]")
       }
     }
-    aux(userInputs, HeadingLevel.h2)
+    aux(userInputs, #Heading2)
   }
 }

@@ -1,6 +1,5 @@
 open Docx
 open Promise
-open Utils
 
 let rec eventToFileChild = (event: CatalaRuntime.event) => {
   open CatalaRuntime
@@ -17,7 +16,7 @@ let rec eventToFileChild = (event: CatalaRuntime.event) => {
 let getUserInputDocSection = (~userInputs: JSON.t, ~jsonSchema: JSON.t): Document.section => {
   {
     children: [
-      Paragraph.create'({text: "Entrées du programme", heading: HeadingLevel.h1}),
+      Paragraph.create'({text: "Entrées du programme", heading: #Heading1}),
     ]->Array.concat(
       UserInputs.fromJSON(~json=userInputs, ~schema=jsonSchema)->UserInputs.Docx.toFileChild,
     ),
@@ -50,13 +49,13 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
       //   children: [
       //     Paragraph.create'({
       //       text: opts.title->Option.getWithDefault("Explication individuelle du calcul"),
-      //       heading: HeadingLevel.title,
-      //       alignment: AlignmentType.center,
+      //       heading: #Title,
+      //       alignment: #center,
       //     }),
       //     Paragraph.create'({
       //       text: opts.description->Option.getUnsafe,
-      //       heading: HeadingLevel.h2,
-      //       alignment: AlignmentType.center,
+      //       heading: #Heading2,
+      //       alignment: #center,
       //     }),
       //   ],
       // },

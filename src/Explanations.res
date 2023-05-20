@@ -102,7 +102,7 @@ module Docx = {
   let outputToFileChilds = (explanationSectionMap: sectionMap): array<fileChild> => {
     let {output} = explanationSectionMap->Map.get(Id.root)->Option.getExn
     [
-      Paragraph.create'({text: "Résultats du programme", heading: HeadingLevel.h1}),
+      Paragraph.create'({text: "Résultats du programme", heading: #Heading1}),
       Paragraph.create'({
         children: [
           TextRun.create(`La valeur calculée par le programme est `),
