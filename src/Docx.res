@@ -82,6 +82,26 @@ module InternalHyperlink = {
   external create: options => paragraphChild = "InternalHyperlink"
 }
 
+/**
+@see https://docx.js.org/api/classes/TableOfContents.html
+
+NOTE(@EmileRolley): Doesn't seem to work (only tested with LibreOffice).
+
+*/
+module TableOfContents = {
+  /** @see https://docx.js.org/api/interfaces/ITableOfContentsOptions.html */
+  type properties = {
+    hyperlink?: bool,
+    headingStyleRange?: string,
+  }
+
+  @module("docx") @new
+  external create: (string, properties) => fileChild = "TableOfContents"
+
+  @module("docx") @new
+  external create': properties => fileChild = "TableOfContents"
+}
+
 module Paragraph = {
   type bullet = {level: int}
 
@@ -121,7 +141,10 @@ module Document = {
     run?: TextRun.options,
     paragraph?: Paragraph.options,
   }
+
   type styles = {paragraphStyles?: array<style>, characterStyles?: array<style>}
+
+  type features = {updateFields?: bool}
 
   type options = {
     creator?: string,
@@ -129,6 +152,7 @@ module Document = {
     title?: string,
     styles?: styles,
     sections: array<section>,
+    features?: features,
   }
 
   @module("docx") @new
