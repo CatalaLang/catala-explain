@@ -6,9 +6,17 @@ let rec eventToFileChild = (event: CatalaRuntime.event) => {
 
   switch event {
   | SubScopeCall({sname, sbody}) =>
-    [Paragraph.create("SubScopeCall: " ++ sname->List.toArray->Array.joinWith(" "))]->Array.concat(
-      sbody->List.toArray->Array.flatMap(eventToFileChild),
-    )
+    let subScopeName = Utils.getSubScopeId(sname)
+    let subScopeParagaph = Paragraph.create'({
+      children: [
+        Bookmark.create({
+          id: subScopeName,
+          children: [TextRun.create("SubScopeCall: " ++ subScopeName)],
+        }),
+      ],
+    })
+
+    [subScopeParagaph]->Array.concat(sbody->List.toArray->Array.flatMap(eventToFileChild))
   | _ => []
   }
 }

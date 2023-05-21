@@ -75,3 +75,7 @@ let getNextHeadingLevel = (lvl: HeadingLevel.t): HeadingLevel.t => {
   | _ => #Heading6
   }
 }
+
+let getSubScopeId = (~sep=".", name: CatalaRuntime.information): string => {
+  name->List.toArray->Array.joinWith(sep)
+}

@@ -38,21 +38,59 @@ let getOutputExn = (event: event): var_def => {
   }
 }
 
-let parseSection = (events: array<event>): section => {
+type parseCtx = {
+  sections: sectionMap,
+  currentId: SectionId.t,
+}
+
+let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explanation> => {
+  events->Array.map(event =>
+    switch event {
+    | VarComputation(var_def) => Def(var_def)
+    | SubScopeCall({sname, inputs, sbody}) => {
+        let id = SectionId.fresh()
+        let title = Utils.getSubScopeId(sname)
+        let explanations = sbody->List.toArray->Array.reverse
+        Console.log2(`SubScopeCall ${title}`, explanations)
+        let output = explanations->Array.shift->Option.map(getOutputExn)
+        Console.log2(`SubScopeCall ${title}`, output)
+        let section = {
+          id,
+          parent: ctx.currentId,
+          title,
+          inputs: List.toArray(inputs),
+          output,
+          explanations: explanations->parseExplanations({...ctx, currentId: id}),
+        }
+        ctx.sections->Map.set(id, section)
+        Ref(id)
+      }
+    | FunCall(_) =>
+      // TODO: handle function call
+      Ref(SectionId.root)
+    }
+  )
+}
+
+let parseRoot = (events: array<event>): section => {
   let explanations = events->Array.reverse
-  let output = explanations->Array.shift->Option.getExn->getOutputExn
+  // A program should always have an output
+  let output = explanations->Array.shift->Option.map(getOutputExn)
   {
-    id: Id.root,
+    id: SectionId.root,
     title: "TODO",
     inputs: [],
     output,
-    explanations: [],
+    explanations: explanations->parseExplanations({
+      sections: Map.make(),
+      currentId: SectionId.root,
+    }),
   }
 }
 
 let fromEvents = (events: array<event>): sectionMap => {
   let sections = Map.make()
-  let root = parseSection(events)
+  let root = parseRoot(events)
   sections->Map.set(root.id, root)
   sections
 }
@@ -106,11 +144,12 @@ module Docx = {
   }
 
   let outputToFileChilds = (explanationSectionMap: sectionMap): array<fileChild> => {
-    let {output} = explanationSectionMap->Map.get(Id.root)->Option.getExn
+    let {output, explanations} = explanationSectionMap->Map.get(SectionId.root)->Option.getExn
     [
       Paragraph.create'({text: "Résultats du programme", heading: #Heading1}),
       Paragraph.create'({
-        children: [
+        children: output
+        ->Option.map(output => [
           TextRun.create(`La valeur calculée par le programme est `),
           TextRun.create'({
             text: output.name->List.reverse->List.headExn,
@@ -120,7 +159,24 @@ module Docx = {
           TextRun.create(` et vaut `),
           output.value->loggedValueToParagraphChild,
           TextRun.create("."),
-        ],
+        ])
+        ->Option.getWithDefault([]),
+      }),
+      Paragraph.create'({
+        children: [TextRun.create(`La valeur a été calculée à partir de : `)]->Array.concat(
+          explanations->Array.map(expl =>
+            switch expl {
+            | Ref(id) => {
+                let section = explanationSectionMap->Map.get(id)->Option.getExn
+                TextRun.create'({
+                  text: `${section.title} - ${id->Int.toString}`,
+                  style: "VariableName",
+                })
+              }
+            | _ => TextRun.create("")
+            }
+          ),
+        ),
       }),
     ]
   }
