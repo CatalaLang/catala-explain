@@ -1,29 +1,35 @@
 open CatalaRuntime
 
-module Id = {
-  type t = int
+/** Manages to generates unique scope call name */
+module SubScopeName = {
+  module Id = UId.Int.Make()
 
-  let root = -1
+  type t = {
+    id: Id.t,
+    name: string,
+    infos: information,
+  }
 
-  let id = ref(0)
-
-  let fresh = () => {
-    id := id.contents + 1
-    id.contents
+  let get = (infos: information): t => {
+    let id = Id.fresh()
+    let name = Utils.getSubScopeId(infos)
+    {id, name, infos}
   }
 }
 
+module SectionId = UId.Int.Make()
+
 type rec section = {
-  id: Id.t,
-  parent?: Id.t,
+  id: SectionId.t,
+  parent?: SectionId.t,
   title: string,
   inputs: array<var_def>,
-  output: var_def,
+  output: option<var_def>,
   explanations: array<explanation>,
 }
-and explanation = Def(var_def) | Ref(Id.t)
+and explanation = Def(var_def) | Ref(SectionId.t)
 
-type sectionMap = Map.t<Id.t, section>
+type sectionMap = Map.t<SectionId.t, section>
 
 let getOutputExn = (event: event): var_def => {
   switch event {
