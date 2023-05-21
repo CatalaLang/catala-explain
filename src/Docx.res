@@ -24,12 +24,12 @@ module TextRun = {
   external create': options => paragraphChild = "TextRun"
 }
 
+/**
+@see https://docx.js.org/api/enums/AlignmentType.html 
+
+#both == JUSTIFIED 
+*/
 module AlignmentType = {
-  /** 
-   * @see https://docx.js.org/api/enums/AlignmentType.html 
-   *
-   * #both == JUSTIFIED
-   */
   type t = [
     | #start
     | #center
@@ -47,6 +47,7 @@ module AlignmentType = {
   ]
 }
 
+/** @see https://docx.js.org/api/enums/HeadingLevel.html */
 module HeadingLevel = {
   type t = [
     | #Heading1
@@ -57,6 +58,28 @@ module HeadingLevel = {
     | #Heading6
     | #Title
   ]
+}
+
+/** @see https://docx.js.org/api/classes/Bookmark.html */
+module Bookmark = {
+  type options = {
+    id: string,
+    children: array<paragraphChild>,
+  }
+
+  @module("docx") @new
+  external create: options => paragraphChild = "Bookmark"
+}
+
+/** @see https://docx.js.org/api/classes/InternalHyperlink.html */
+module InternalHyperlink = {
+  type options = {
+    anchor: string,
+    children: array<paragraphChild>,
+  }
+
+  @module("docx") @new
+  external create: options => paragraphChild = "InternalHyperlink"
 }
 
 module Paragraph = {
