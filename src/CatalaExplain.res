@@ -1,25 +1,25 @@
 open Docx
 open Promise
 
-let rec eventToFileChild = (event: CatalaRuntime.event) => {
-  open CatalaRuntime
-
-  switch event {
-  | SubScopeCall({sname, sbody}) =>
-    let subScopeName = Utils.getSubScopeId(sname)
-    let subScopeParagaph = Paragraph.create'({
-      children: [
-        Bookmark.create({
-          id: subScopeName,
-          children: [TextRun.create("SubScopeCall: " ++ subScopeName)],
-        }),
-      ],
-    })
-
-    [subScopeParagaph]->Array.concat(sbody->List.toArray->Array.flatMap(eventToFileChild))
-  | _ => []
-  }
-}
+// let rec eventToFileChild = (event: CatalaRuntime.event) => {
+//   open CatalaRuntime
+//
+//   switch event {
+//   | SubScopeCall({sname, sbody}) =>
+//     let subScopeName = Utils.getSubScopeId(sname)
+//     let subScopeParagaph = Paragraph.create'({
+//       children: [
+//         Bookmark.create({
+//           id: subScopeName,
+//           children: [TextRun.create("SubScopeCall: " ++ subScopeName)],
+//         }),
+//       ],
+//     })
+//
+//     [subScopeParagaph]->Array.concat(sbody->List.toArray->Array.flatMap(eventToFileChild))
+//   | _ => []
+//   }
+// }
 
 let getUserInputDocSection = (~userInputs: JSON.t, ~jsonSchema: JSON.t): Document.section => {
   {
@@ -33,7 +33,29 @@ let getUserInputDocSection = (~userInputs: JSON.t, ~jsonSchema: JSON.t): Documen
 
 let getResultDocSection = (explanationSectionMap: Explanations.sectionMap): Document.section => {
   {
-    children: explanationSectionMap->Explanations.Docx.outputToFileChilds,
+    children: [
+      Paragraph.create'({text: "Résultats du programme", heading: #Heading1}),
+    ]->Array.concat(explanationSectionMap->Explanations.Docx.outputToFileChilds),
+  }
+}
+
+let getExplanationsDocSection = (
+  explanationSectionMap: Explanations.sectionMap,
+): Document.section => {
+  {
+    children: [
+      Paragraph.create'({text: "Explications", heading: #Heading1}),
+      Paragraph.create'({
+        children: [
+          TextRun.create("Vous trouverez ci-dessous les explications détaillées du calcul."),
+          TextRun.create("Pour chaque "),
+          TextRun.create'({text: "étape", italics: true}),
+          TextRun.create(
+            " vous trouverez une explication de la règle de calcul utilisée, ainsi que les valeurs des variables utilisées et de potentielles sous-étapes nécessaires.",
+          ),
+        ],
+      }),
+    ]->Array.concat(explanationSectionMap->Explanations.Docx.explanationsToFileChilds),
   }
 }
 
@@ -47,7 +69,6 @@ type options = {
 
 let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntime.event>) => {
   let explanationSectionMap = events->Explanations.fromEvents
-  Console.log2("explanationSectionMap", explanationSectionMap)
   Document.create({
     title: opts.title->Option.getUnsafe,
     creator: opts.creator->Option.getUnsafe,
@@ -72,11 +93,10 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
         ~jsonSchema=opts.jsonSchema->Option.getWithDefault(JSON.Encode.null),
       ),
       explanationSectionMap->getResultDocSection,
-      {
-        children: events->Array.flatMap(eventToFileChild),
-      },
+      explanationSectionMap->getExplanationsDocSection,
     ],
     styles: {
+      default: Styles.default,
       characterStyles: Styles.characterStyles,
     },
   })

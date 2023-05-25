@@ -1,3 +1,49 @@
+open Docx
+
+let default: Document.defaultStyle = {
+  let baseHeadingStyle: Document.style = {
+    run: {
+      font: "Marianne",
+      bold: true,
+      color: "161616",
+    },
+  }
+  let baseHeadingStyleRun = baseHeadingStyle.run->Option.getExn
+  {
+    document: {
+      run: {
+        font: "Marianne",
+        color: "3a3a3a",
+        size: 16,
+      },
+    },
+    heading1: {
+      run: {
+        ...baseHeadingStyleRun,
+        size: 34,
+      },
+    },
+    heading2: {
+      run: {
+        ...baseHeadingStyleRun,
+        size: 29,
+      },
+    },
+    heading3: {
+      run: {
+        ...baseHeadingStyleRun,
+        size: 25,
+      },
+    },
+    heading4: {
+      run: {
+        ...baseHeadingStyleRun,
+        size: 22,
+      },
+    },
+  }
+}
+
 let characterStyles: array<Docx.Document.style> = [
   {
     id: "ScopeName",

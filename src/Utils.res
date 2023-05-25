@@ -79,3 +79,18 @@ let getNextHeadingLevel = (lvl: HeadingLevel.t): HeadingLevel.t => {
 let getSubScopeId = (~sep=".", name: CatalaRuntime.information): string => {
   name->List.toArray->Array.joinWith(sep)
 }
+
+let getSectionTitle = (infos: CatalaRuntime.information): string => {
+  switch infos->List.reverse->List.head {
+  | Some(name) => name
+  | None => "_"
+  }
+}
+
+@raises(Error.t)
+let getJsErr = (opt: option<'a>, errMsg: string): 'a => {
+  switch opt {
+  | Some(x) => x
+  | None => Js.Exn.raiseError(errMsg)
+  }
+}

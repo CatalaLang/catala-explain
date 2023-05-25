@@ -133,8 +133,8 @@ module Document = {
   }
 
   type style = {
-    id: string,
-    name: string,
+    id?: string,
+    name?: string,
     basedOn?: string,
     next?: string,
     quickFormat?: bool,
@@ -142,7 +142,20 @@ module Document = {
     paragraph?: Paragraph.options,
   }
 
-  type styles = {paragraphStyles?: array<style>, characterStyles?: array<style>}
+  type defaultStyle = {
+    document?: style,
+    heading1?: style,
+    heading2?: style,
+    heading3?: style,
+    heading4?: style,
+    paragraphList?: style,
+  }
+
+  type styles = {
+    default?: defaultStyle,
+    paragraphStyles?: array<style>,
+    characterStyles?: array<style>,
+  }
 
   type features = {updateFields?: bool}
 

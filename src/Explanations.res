@@ -44,16 +44,14 @@ type parseCtx = {
 }
 
 let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explanation> => {
-  events->Array.map(event =>
+  events->Array.map(event => {
     switch event {
     | VarComputation(var_def) => Def(var_def)
     | SubScopeCall({sname, inputs, sbody}) => {
         let id = SectionId.fresh()
-        let title = Utils.getSubScopeId(sname)
+        let title = Utils.getSectionTitle(sname)
         let explanations = sbody->List.toArray->Array.reverse
-        Console.log2(`SubScopeCall ${title}`, explanations)
         let output = explanations->Array.shift->Option.map(getOutputExn)
-        Console.log2(`SubScopeCall ${title}`, output)
         let section = {
           id,
           parent: ctx.currentId,
@@ -63,16 +61,17 @@ let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explana
           explanations: explanations->parseExplanations({...ctx, currentId: id}),
         }
         ctx.sections->Map.set(id, section)
+        Console.log2(`SubScopeCall ${id->Int.toString}`, ctx.sections)
         Ref(id)
       }
     | FunCall(_) =>
       // TODO: handle function call
       Ref(SectionId.root)
     }
-  )
+  })
 }
 
-let parseRoot = (events: array<event>): section => {
+let parseRoot = (ctx: parseCtx, events: array<event>): section => {
   let explanations = events->Array.reverse
   // A program should always have an output
   let output = explanations->Array.shift->Option.map(getOutputExn)
@@ -81,16 +80,13 @@ let parseRoot = (events: array<event>): section => {
     title: "TODO",
     inputs: [],
     output,
-    explanations: explanations->parseExplanations({
-      sections: Map.make(),
-      currentId: SectionId.root,
-    }),
+    explanations: explanations->parseExplanations(ctx),
   }
 }
 
 let fromEvents = (events: array<event>): sectionMap => {
   let sections = Map.make()
-  let root = parseRoot(events)
+  let root = parseRoot({sections, currentId: SectionId.root}, events)
   sections->Map.set(root.id, root)
   sections
 }
@@ -127,7 +123,11 @@ module Docx = {
         text: d,
         style: "DateLiteral",
       })
-    | _ => failwith("TODO")
+    | _ =>
+      TextRun.create'({
+        text: `TODO: ${val->LoggedValue.loggedValueToString(1)}`,
+        style: "EnumLiteral",
+      })
     }
   }
 
@@ -143,10 +143,13 @@ module Docx = {
     })
   }
 
+  @raises(Error.t)
   let outputToFileChilds = (explanationSectionMap: sectionMap): array<fileChild> => {
-    let {output, explanations} = explanationSectionMap->Map.get(SectionId.root)->Option.getExn
+    let {output, explanations} =
+      explanationSectionMap
+      ->Map.get(SectionId.root)
+      ->Utils.getJsErr("Root section not found in [explanationSectionMap]")
     [
-      Paragraph.create'({text: "Résultats du programme", heading: #Heading1}),
       Paragraph.create'({
         children: output
         ->Option.map(output => [
@@ -167,10 +170,20 @@ module Docx = {
           explanations->Array.map(expl =>
             switch expl {
             | Ref(id) => {
-                let section = explanationSectionMap->Map.get(id)->Option.getExn
-                TextRun.create'({
-                  text: `${section.title} - ${id->Int.toString}`,
-                  style: "VariableName",
+                let {title} =
+                  explanationSectionMap
+                  ->Map.get(id)
+                  ->Utils.getJsErr(
+                    `Section ${id->Int.toString} not found in [explanationSectionMap]`,
+                  )
+                InternalHyperlink.create({
+                  anchor: `section-${id->Int.toString}`,
+                  children: [
+                    TextRun.create'({
+                      text: title,
+                      style: "Hyperlink",
+                    }),
+                  ],
                 })
               }
             | _ => TextRun.create("")
@@ -179,5 +192,86 @@ module Docx = {
         ),
       }),
     ]
+  }
+
+  let explanationsToFileChilds = (explanationSectionMap: sectionMap): array<fileChild> => {
+    explanationSectionMap
+    ->Map.entries
+    ->Iterator.toArray
+    ->Array.flatMap(((id, {title, inputs, output, explanations})) => {
+      [
+        Paragraph.create'({
+          heading: #Heading2,
+          children: [
+            Bookmark.create({
+              id: `section-${id->Int.toString}`,
+              children: [
+                TextRun.create'({
+                  text: title,
+                }),
+              ],
+            }),
+          ],
+        }),
+        // Paragraph.create'({
+        //   text: "Entrées",
+        //   heading: #Heading3,
+        // }),
+        // Paragraph.create'({
+        //   children: inputs->Array.flatMap(input => [
+        //     TextRun.create'({
+        //       text: input.name->List.reverse->List.headExn,
+        //       style: "VariableName",
+        //     }),
+        //     TextRun.create(` : `),
+        //     input.value->loggedValueToParagraphChild,
+        //   ]),
+        // }),
+        // Paragraph.create'({
+        //   text: "Sortie",
+        //   heading: #Heading3,
+        // }),
+        // Paragraph.create'({
+        //   children: output
+        //   ->Option.map(output => [
+        //     TextRun.create'({
+        //       text: output.name->List.reverse->List.headExn,
+        //       style: "VariableName",
+        //     }),
+        //     TextRun.create(` : `),
+        //     output.value->loggedValueToParagraphChild,
+        //   ])
+        //   ->Option.getWithDefault([]),
+        // }),
+        // Paragraph.create'({
+        //   text: "Explications",
+        //   heading: #Heading3,
+        // }),
+        // Paragraph.create'({
+        //   children: explanations->Array.map(expl =>
+        //     switch expl {
+        //     | Ref(id) => {
+        //         let section =
+        //           explanationSectionMap
+        //           ->Map.get(id)
+        //           ->Utils.getJsErr(
+        //             `Section ${id->Int.toString} not found in [explanationSectionMap]`,
+        //           )
+        //         InternalHyperlink.create({
+        //           anchor: `section-${id->Int.toString}`,
+        //           children: [
+        //             TextRun.create'({
+        //               text: `${section.title} - ${id->Int.toString}`,
+        //               style: "VariableName",
+        //             }),
+        //           ],
+        //         })
+        //       }
+        //     | _ => TextRun.create("")
+        //     }
+        //   ),
+        // }),
+      ]
+    })
   }
 }
