@@ -61,7 +61,6 @@ let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explana
           explanations: explanations->parseExplanations({...ctx, currentId: id}),
         }
         ctx.sections->Map.set(id, section)
-        Console.log2(`SubScopeCall ${id->Int.toString}`, ctx.sections)
         Ref(id)
       }
     | FunCall(_) =>
@@ -74,12 +73,16 @@ let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explana
 let parseRoot = (ctx: parseCtx, events: array<event>): section => {
   let explanations = events->Array.reverse
   // A program should always have an output
-  let output = explanations->Array.shift->Option.map(getOutputExn)
+  let output =
+    explanations
+    ->Array.shift
+    ->Option.map(getOutputExn)
+    ->Utils.getJsErr(`Last event is expected to be a variable definition ouput`)
   {
     id: SectionId.root,
-    title: "TODO",
+    title: output.name->Utils.getSectionTitle,
     inputs: [],
-    output,
+    output: Some(output),
     explanations: explanations->parseExplanations(ctx),
   }
 }
@@ -93,7 +96,31 @@ let fromEvents = (events: array<event>): sectionMap => {
 
 module Docx = {
   open Docx
-  let loggedValueToParagraphChild = (val: LoggedValue.t): paragraphChild => {
+
+  let linkToSection = (id: SectionId.t, title: string): Docx.paragraphChild => {
+    InternalHyperlink.create({
+      anchor: `section-${id->Int.toString}`,
+      children: [
+        TextRun.create'({
+          text: title,
+          style: "Hyperlink",
+        }),
+      ],
+    })
+  }
+
+  let bookmarkSection = (id: SectionId.t, title: string): Docx.paragraphChild => {
+    Bookmark.create({
+      id: `section-${id->Int.toString}`,
+      children: [
+        TextRun.create'({
+          text: title,
+        }),
+      ],
+    })
+  }
+
+  let litLoggedValueToParagraphChild = (val: LoggedValue.t): paragraphChild => {
     switch val {
     | Bool(b) =>
       // TODO: manage the language
@@ -111,6 +138,11 @@ module Docx = {
         text: f->Float.toString,
         style: "NumberLiteral",
       })
+    | Integer(i) =>
+      TextRun.create'({
+        text: i->Int.toString,
+        style: "NumberLiteral",
+      })
     | Date(d) =>
       TextRun.create'({
         text: d
@@ -123,11 +155,106 @@ module Docx = {
         text: d,
         style: "DateLiteral",
       })
-    | _ =>
+    | Enum(_, (name, Unit)) =>
       TextRun.create'({
-        text: `TODO: ${val->LoggedValue.loggedValueToString(1)}`,
+        text: name,
         style: "EnumLiteral",
       })
+    | _ => Js.Exn.raiseError("Should be a literal logged value")
+    }
+  }
+
+  let isLitLoggedValue = (val: LoggedValue.t): bool => {
+    switch val {
+    | Enum(_, (_, val)) if val != Unit => false
+    | Struct(_, l) if l->List.length != 0 => false
+    | Array(l) if l->Array.length != 0 => false
+    | _ => true
+    }
+  }
+
+  let rec loggedValueToFileChilds = (~level: int=0, val: LoggedValue.t): array<fileChild> => {
+    switch val {
+    | Enum(_, (_, val)) =>
+      // [
+      //   Paragraph.create'({
+      //     text: name,
+      //     heading: lvl,
+      //   }),
+      /* ]-> Array.concat( */
+      val->loggedValueToFileChilds(~level)
+    | Struct(_, l) =>
+      // [
+      //   Paragraph.create'({
+      //     text: infos->Utils.getSubScopeId,
+      //     heading: lvl,
+      //   }),
+      // ]->Array.concat(
+      l
+      ->List.toArray
+      ->Array.filter(((_, value)) => !Utils.loggedValueIsEmpty(value))
+      ->Array.sort(((_, v1), (_, v2)) => Utils.loggedValueCompare(v1, v2))
+      ->Array.flatMap(((field, value)) => {
+        switch value {
+        | Array([]) => []
+        | v if v->isLitLoggedValue => [
+            Paragraph.create'({
+              children: [TextRun.create(`${field} : `), value->litLoggedValueToParagraphChild],
+              bullet: {level: level},
+            }),
+          ]
+        | _ =>
+          [
+            Paragraph.create'({
+              text: `${field} : `,
+              bullet: {level: level},
+            }),
+          ]->Array.concat(value->loggedValueToFileChilds(~level))
+        }
+      })
+    // )
+    | Array(val) => val->Array.flatMap(loggedValueToFileChilds(_, ~level=level + 1))
+    | _ => []
+    }
+  }
+
+  let inputToFileChilds = ({name, value, pos}: var_def): array<fileChild> => {
+    if value->isLitLoggedValue {
+      [
+        Paragraph.create'({
+          children: [
+            TextRun.create(`La variable `),
+            TextRun.create'({
+              text: `${name->Utils.lastExn}`,
+              style: "VariableName",
+            }),
+            TextRun.create(` vaut dans ce cas `),
+            value->litLoggedValueToParagraphChild,
+            TextRun.create(`. `),
+            pos->Option.mapWithDefault(TextRun.create(""), Utils.getLinkToSourcePos),
+          ],
+        }),
+      ]
+    } else {
+      [
+        Paragraph.create'({
+          children: [
+            TextRun.create(`La variable `),
+            TextRun.create'({
+              text: `${name->Utils.lastExn}`,
+              style: "VariableName",
+            }),
+            TextRun.create(` (de type `),
+            TextRun.create'({
+              text: value->Utils.loggedValueKindToText,
+              italics: true,
+            }),
+            TextRun.create(`) `),
+            TextRun.create(` vaut dans ce cas : `),
+            pos->Option.mapWithDefault(TextRun.create(""), Utils.getLinkToSourcePos),
+          ],
+        }),
+      ]->Array.concat(value->loggedValueToFileChilds)
     }
   }
 
@@ -149,6 +276,13 @@ module Docx = {
       explanationSectionMap
       ->Map.get(SectionId.root)
       ->Utils.getJsErr("Root section not found in [explanationSectionMap]")
+    let refs = explanations->Array.filter(explanation => {
+      switch explanation {
+      | Ref(_) => true
+      | _ => false
+      }
+    })
+    let nbRefs = refs->Array.length
     [
       Paragraph.create'({
         children: output
@@ -158,16 +292,27 @@ module Docx = {
             text: output.name->List.reverse->List.headExn,
             style: "VariableName",
           }),
-          // output.name->informationToParagraphChilds,
           TextRun.create(` et vaut `),
-          output.value->loggedValueToParagraphChild,
+          if output.value->isLitLoggedValue {
+            output.value->litLoggedValueToParagraphChild
+          } else {
+            TextRun.create("TODO (non-literal value)")
+          },
           TextRun.create("."),
         ])
         ->Option.getWithDefault([]),
       }),
       Paragraph.create'({
-        children: [TextRun.create(`La valeur a été calculée à partir de : `)]->Array.concat(
-          explanations->Array.map(expl =>
+        children: [
+          if nbRefs == 1 {
+            TextRun.create(`La valeur a été calculée à partir de l'étape de calcul `)
+          } else {
+            TextRun.create(`La valeur a été calculée à partir des étapes de calculs `)
+          },
+        ]->Array.concat(
+          refs
+          ->Array.mapWithIndex((expl, i) => {
+            let isLast = i == nbRefs - 1
             switch expl {
             | Ref(id) => {
                 let {title} =
@@ -176,19 +321,19 @@ module Docx = {
                   ->Utils.getJsErr(
                     `Section ${id->Int.toString} not found in [explanationSectionMap]`,
                   )
-                InternalHyperlink.create({
-                  anchor: `section-${id->Int.toString}`,
-                  children: [
-                    TextRun.create'({
-                      text: title,
-                      style: "Hyperlink",
-                    }),
-                  ],
-                })
+                [
+                  linkToSection(id, title),
+                  if isLast {
+                    TextRun.create(".")
+                  } else {
+                    TextRun.create(", ")
+                  },
+                ]
               }
-            | _ => TextRun.create("")
+            | _ => []
             }
-          ),
+          })
+          ->Array.flat,
         ),
       }),
     ]
@@ -199,79 +344,84 @@ module Docx = {
     ->Map.entries
     ->Iterator.toArray
     ->Array.flatMap(((id, {title, inputs, output, explanations})) => {
-      [
-        Paragraph.create'({
-          heading: #Heading2,
-          children: [
-            Bookmark.create({
-              id: `section-${id->Int.toString}`,
-              children: [
-                TextRun.create'({
-                  text: title,
-                }),
-              ],
-            }),
-          ],
-        }),
-        // Paragraph.create'({
-        //   text: "Entrées",
-        //   heading: #Heading3,
-        // }),
-        // Paragraph.create'({
-        //   children: inputs->Array.flatMap(input => [
-        //     TextRun.create'({
-        //       text: input.name->List.reverse->List.headExn,
-        //       style: "VariableName",
-        //     }),
-        //     TextRun.create(` : `),
-        //     input.value->loggedValueToParagraphChild,
-        //   ]),
-        // }),
-        // Paragraph.create'({
-        //   text: "Sortie",
-        //   heading: #Heading3,
-        // }),
-        // Paragraph.create'({
-        //   children: output
-        //   ->Option.map(output => [
-        //     TextRun.create'({
-        //       text: output.name->List.reverse->List.headExn,
-        //       style: "VariableName",
-        //     }),
-        //     TextRun.create(` : `),
-        //     output.value->loggedValueToParagraphChild,
-        //   ])
-        //   ->Option.getWithDefault([]),
-        // }),
-        // Paragraph.create'({
-        //   text: "Explications",
-        //   heading: #Heading3,
-        // }),
-        // Paragraph.create'({
-        //   children: explanations->Array.map(expl =>
-        //     switch expl {
-        //     | Ref(id) => {
-        //         let section =
-        //           explanationSectionMap
-        //           ->Map.get(id)
-        //           ->Utils.getJsErr(
-        //             `Section ${id->Int.toString} not found in [explanationSectionMap]`,
-        //           )
-        //         InternalHyperlink.create({
-        //           anchor: `section-${id->Int.toString}`,
-        //           children: [
-        //             TextRun.create'({
-        //               text: `${section.title} - ${id->Int.toString}`,
-        //               style: "VariableName",
-        //             }),
-        //           ],
-        //         })
-        //       }
-        //     | _ => TextRun.create("")
-        //     }
-        //   ),
-        // }),
-      ]
+      if id == SectionId.root {
+        []
+      } else {
+        [
+          Paragraph.create'({
+            heading: #Heading2,
+            children: [bookmarkSection(id, title)],
+          }),
+          Paragraph.create'({
+            heading: #Heading3,
+            children: [
+              TextRun.create("Entrées utilisées pour l'étape de calcul "),
+              linkToSection(id, title),
+            ],
+          }),
+        ]
+        ->Array.concat(
+          inputs
+          ->Array.filter(({value}) => !Utils.loggedValueIsEmpty(value))
+          ->Array.sort((a, b) => Utils.loggedValueCompare(a.value, b.value))
+          ->Array.flatMap(inputToFileChilds(_)),
+        )
+        ->Array.concat([
+          Paragraph.create'({
+            heading: #Heading3,
+            children: [
+              TextRun.create("Valeur calculée dans l'étape de calcul "),
+              linkToSection(id, title),
+            ],
+          }),
+          Paragraph.create'({
+            children: output
+            ->Option.map(output => [
+              TextRun.create'({
+                text: output.name->Utils.lastExn,
+              }),
+              TextRun.create(` : `),
+              if output.value->isLitLoggedValue {
+                output.value->litLoggedValueToParagraphChild
+              } else {
+                TextRun.create("TODO (non-literal value)")
+              },
+            ])
+            ->Option.getWithDefault([]),
+          }),
+          Paragraph.create'({
+            heading: #Heading3,
+            children: [
+              TextRun.create("Explications pour l'étape de calcul "),
+              linkToSection(id, title),
+            ],
+          }),
+          Paragraph.create'({
+            children: explanations->Array.map(expl =>
+              switch expl {
+              | Ref(id) => {
+                  let section =
+                    explanationSectionMap
+                    ->Map.get(id)
+                    ->Utils.getJsErr(
+                      `Section ${id->Int.toString} not found in [explanationSectionMap]`,
+                    )
+                  InternalHyperlink.create({
+                    anchor: `section-${id->Int.toString}`,
+                    children: [
+                      TextRun.create'({
+                        text: `${section.title} - ${id->Int.toString}`,
+                        style: "VariableName",
+                      }),
+                    ],
+                  })
+                }
+              | _ => TextRun.create("")
+              }
+            ),
+          }),
+        ])
+      }
     })
   }
 }

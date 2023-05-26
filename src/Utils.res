@@ -1,4 +1,5 @@
 open Docx
+open CatalaRuntime
 
 let isEmptyJSON = (inputs: JSON.t): bool => {
   switch JSON.Classify.classify(inputs) {
@@ -76,11 +77,11 @@ let getNextHeadingLevel = (lvl: HeadingLevel.t): HeadingLevel.t => {
   }
 }
 
-let getSubScopeId = (~sep=".", name: CatalaRuntime.information): string => {
+let getSubScopeId = (~sep=".", name: information): string => {
   name->List.toArray->Array.joinWith(sep)
 }
 
-let getSectionTitle = (infos: CatalaRuntime.information): string => {
+let getSectionTitle = (infos: information): string => {
   switch infos->List.reverse->List.head {
   | Some(name) => name
   | None => "_"
@@ -93,4 +94,54 @@ let getJsErr = (opt: option<'a>, errMsg: string): 'a => {
   | Some(x) => x
   | None => Js.Exn.raiseError(errMsg)
   }
+}
+
+let loggedValueIsEmpty = (value: LoggedValue.t): bool => {
+  switch value {
+  | Array([]) | Unembeddable | Struct(_, list{}) => true
+  | _ => false
+  }
+}
+
+let loggedValueOrder = (value: LoggedValue.t): int => {
+  switch value {
+  | Array(_) => 3
+  | Struct(_) => 2
+  | Enum(_, (_, v)) if v != Unit => 1
+  | _ => 0
+  }
+}
+
+let loggedValueCompare = (a: LoggedValue.t, b: LoggedValue.t): int =>
+  loggedValueOrder(a) - loggedValueOrder(b)
+
+let orderAndFilterEmpty = (values: array<LoggedValue.t>): array<LoggedValue.t> => {
+  values
+  ->Array.filter(val => !loggedValueIsEmpty(val))
+  ->Array.sort((a, b) => loggedValueOrder(a) - loggedValueOrder(b))
+}
+
+let loggedValueKindToText = (value: LoggedValue.t): string => {
+  switch value {
+  | Enum(_, (name, v)) if v != Unit => name
+  | Struct(infos, _) => infos->lastExn
+  | _ => Js.Exn.raiseError("Expected a struct or an enum with a value")
+  }
+}
+
+let getLinkToSourcePos = ({filename, start_line, end_line}: sourcePosition): paragraphChild => {
+  ExternalHyperlink.create({
+    children: [
+      TextRun.create("["),
+      TextRun.create'({
+        // text: "voir le code source ➥",
+        text: "➥",
+        underline: {
+          type_: #single,
+        },
+      }),
+      TextRun.create("]"),
+    ],
+    link: `https://github.com/CatalaLang/catala/blob/master/${filename}#L${start_line->Int.toString}-L${end_line->Int.toString}`,
+  })
 }

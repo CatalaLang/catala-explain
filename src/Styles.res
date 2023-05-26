@@ -41,6 +41,27 @@ let default: Document.defaultStyle = {
         size: 22,
       },
     },
+    heading5: {
+      run: {
+        ...baseHeadingStyleRun,
+        size: 20,
+      },
+    },
+    heading6: {
+      run: {
+        ...baseHeadingStyleRun,
+        size: 18,
+      },
+    },
+    hyperlink: {
+      run: {
+        color: "161616",
+        underline: {
+          color: "161616",
+          type_: #single,
+        },
+      },
+    },
   }
 }
 
@@ -66,7 +87,8 @@ let characterStyles: array<Docx.Document.style> = [
     run: {
       font: "Fira Mono",
       bold: true,
-      color: "BB0066",
+      size: 16,
+      color: "161616",
     },
   },
   {
@@ -138,6 +160,19 @@ let characterStyles: array<Docx.Document.style> = [
     run: {
       font: "Fira Mono",
       italics: true,
+    },
+  },
+  {
+    id: "Hyperlink",
+    name: "Hyperlink",
+    basedOn: "Normal",
+    next: "Normal",
+    quickFormat: true,
+    run: {
+      underline: {
+        color: "161616",
+        type_: #single,
+      },
     },
   },
 ]
