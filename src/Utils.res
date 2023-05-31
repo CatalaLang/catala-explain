@@ -97,7 +97,7 @@ let getJsErr = (opt: option<'a>, errMsg: string): 'a => {
 }
 
 let loggedValueIsEmbeddable = (value: LoggedValue.t): bool => {
-  value == Unembeddable
+  value != Unembeddable
 }
 
 let loggedValueOrder = (value: LoggedValue.t): int => {
@@ -118,11 +118,20 @@ let orderAndFilterEmpty = (values: array<LoggedValue.t>): array<LoggedValue.t> =
   ->Array.sort((a, b) => loggedValueOrder(a) - loggedValueOrder(b))
 }
 
-let loggedValueKindToText = (value: LoggedValue.t): string => {
+let rec loggedValueKindToText = (value: LoggedValue.t): string => {
   switch value {
   | Enum(_, (name, v)) if v != Unit => name
   | Struct(infos, _) => infos->lastExn
-  | _ => Js.Exn.raiseError("Expected a struct or an enum with a value")
+  | Array(elems) =>
+    if elems->Array.length == 0 {
+      "ensemble vide"
+    } else {
+      "ensemble d'" ++ elems->Array.getUnsafe(0)->loggedValueKindToText
+    }
+  | val =>
+    Js.Exn.raiseError(
+      "Expected a struct or an enum with a value got" ++ LoggedValue.loggedValueToString(val, 0),
+    )
   }
 }
 

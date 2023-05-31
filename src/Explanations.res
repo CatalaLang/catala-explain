@@ -34,7 +34,7 @@ type sectionMap = Map.t<SectionId.t, section>
 let getOutputs = (events: array<event>): array<var_def> => {
   events->Array.filterMap(event => {
     switch event {
-    | VarComputation({io} as var_def) if io.io_output == true => Some(var_def)
+    | VarComputation({io: {io_output}} as var_def) if io_output == true => Some(var_def)
     | _ => None
     }
   })
@@ -122,9 +122,9 @@ module Docx = {
 
   let isLitLoggedValue = (val: LoggedValue.t): bool => {
     switch val {
-    | Enum(_, (_, val)) /* if val != Unit */ => false
-    | Struct(_, l) /* if l->List.length != 0 */ => false
-    | Array(l) /* if l->Array.length != 0 */ => false
+    | Enum(_, (_, val)) if val != Unit => false
+    | Struct(_, l) if l->List.length != 0 => false
+    | Array(l) if l->Array.length != 0 => false
     | Unembeddable => // TODO: handle unembeddable, which are functions and other stuff
       false
     | _ => true
@@ -171,15 +171,12 @@ module Docx = {
         text: name,
         style: "EnumLiteral",
       })
-    | Array(val) =>
-      Js.Exn.raiseError(
-        `Should be a literal logged value got an array of ${val->Array.length->Int.toString} value`,
-      )
-    | Struct(_) => Js.Exn.raiseError(`Should be a literal logged value got a struct value`)
-    | val =>
-      Js.Exn.raiseError(
-        `Should be a literal logged value got ${val->LoggedValue.loggedValueToString(0)}`,
-      )
+    | Array([]) =>
+      TextRun.create'({
+        text: "[]",
+        style: "ArrayLiteral",
+      })
+    | _ => Js.Exn.raiseError(`Should be a literal logged value`)
     }
   }
 
