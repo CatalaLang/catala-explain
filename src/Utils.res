@@ -96,11 +96,8 @@ let getJsErr = (opt: option<'a>, errMsg: string): 'a => {
   }
 }
 
-let loggedValueIsEmpty = (value: LoggedValue.t): bool => {
-  switch value {
-  | Array([]) | Unembeddable | Struct(_, list{}) => true
-  | _ => false
-  }
+let loggedValueIsEmbeddable = (value: LoggedValue.t): bool => {
+  value == Unembeddable
 }
 
 let loggedValueOrder = (value: LoggedValue.t): int => {
@@ -117,7 +114,7 @@ let loggedValueCompare = (a: LoggedValue.t, b: LoggedValue.t): int =>
 
 let orderAndFilterEmpty = (values: array<LoggedValue.t>): array<LoggedValue.t> => {
   values
-  ->Array.filter(val => !loggedValueIsEmpty(val))
+  ->Array.filter(val => !loggedValueIsEmbeddable(val))
   ->Array.sort((a, b) => loggedValueOrder(a) - loggedValueOrder(b))
 }
 

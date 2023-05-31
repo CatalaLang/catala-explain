@@ -87,7 +87,7 @@ let characterStyles: array<Docx.Document.style> = [
     run: {
       font: "Fira Mono",
       bold: true,
-      size: 16,
+      size: 14,
       color: "161616",
     },
   },
