@@ -25,9 +25,11 @@
 		"trace"
 	],
 	"devDependencies": {
-		"@catala-lang/rescript-catala": "^0.8.0",
+		"@catala-lang/french-law": "^0.8.3-b.3",
+		"@catala-lang/rescript-catala": "^0.8.1-b.0",
 		"@rescript/core": "^0.3.1",
 		"file-saver": "^2.0.5",
+		"reanalyze": "^2.23.0",
 		"rescript": "^10.1.4"
 	},
 	"dependencies": {
