@@ -163,7 +163,7 @@ module Docx = {
       })
     | Duration(d) =>
       TextRun.create'({
-        text: d,
+        text: d->Utils.durationToString,
         style: "DateLiteral",
       })
     | Enum(_, (name, Unit)) =>

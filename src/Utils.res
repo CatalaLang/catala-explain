@@ -151,3 +151,23 @@ let getLinkToSourcePos = ({filename, start_line, end_line}: sourcePosition): par
     link: `https://github.com/CatalaLang/catala/blob/master/${filename}#L${start_line->Int.toString}-L${end_line->Int.toString}`,
   })
 }
+
+/**
+* The expected format of the @param d is "[<number> years, <number> months, <number> days]"
+*/
+let durationToString = (d: string) => {
+  let days = d => d ++ (d == "1" ? " jour" : " jours")
+  let years = d => d ++ (d == "1" ? " an" : " ans")
+  let months = d => d ++ " mois"
+  switch d->String.match(%re("/\[(\d+) years, (\d+) months, (\d+) days\]/")) {
+  | Some([_, "0", "0", "0"]) => "0 jour"
+  | Some([_, "0", "0", d]) => days(d)
+  | Some([_, "0", m, "0"]) => months(m)
+  | Some([_, "0", m, d]) => months(m) ++ " et " ++ days(d)
+  | Some([_, y, "0", "0"]) => years(y)
+  | Some([_, y, "0", d]) => years(y) ++ " et " ++ days(d)
+  | Some([_, y, m, "0"]) => years(y) ++ " et " ++ months(m)
+  | Some([_, y, m, d]) => years(y) ++ ", " ++ months(m) ++ " et " ++ days(d)
+  | Some(_) | None => Js.Exn.raiseError("Got an invalid duration: " ++ d)
+  }
+}
