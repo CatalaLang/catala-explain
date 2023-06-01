@@ -46,29 +46,30 @@ type parseCtx = {
 }
 
 let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explanation> => {
+  let createNewSection = (name, inputs, body, outputs) => {
+    let id = SectionId.fresh()
+    let title = Utils.getSectionTitle(name)
+    let section = {
+      id,
+      parent: ctx.currentId,
+      title,
+      inputs: List.toArray(inputs),
+      outputs,
+      explanations: body->List.toArray->parseExplanations({...ctx, currentId: id}),
+    }
+    ctx.sections->Map.set(id, section)
+    Ref(id)
+  }
+
   events->Array.map(event => {
     switch event {
     | VarComputation(var_def) => Def(var_def)
     | SubScopeCall({sname, inputs, sbody}) => {
-        let id = SectionId.fresh()
-        let title = Utils.getSectionTitle(sname)
-        let explanations = sbody->List.toArray->Array.reverse
-        let outputs = explanations->getOutputs
-        // TODO: remove outputs from explanations?
-        let section = {
-          id,
-          parent: ctx.currentId,
-          title,
-          inputs: List.toArray(inputs),
-          outputs,
-          explanations: explanations->parseExplanations({...ctx, currentId: id}),
-        }
-        ctx.sections->Map.set(id, section)
-        Ref(id)
+        let outputs = sbody->List.toArray->Array.reverse->getOutputs
+        createNewSection(sname, inputs, sbody, outputs)
       }
-    | FunCall(_) =>
-      // TODO: handle function call
-      Ref(SectionId.root)
+    | FunCall({fun_name, fun_inputs, body, output}) =>
+      createNewSection(fun_name, fun_inputs, body, [output])
     }
   })
 }
@@ -250,10 +251,7 @@ module Docx = {
     }
   }
 
-  let varDefToFileChilds = ({name, value, pos, fun_calls}: var_def): array<fileChild> => {
-    // TODO: manage fun calls
-    ignore(fun_calls)
-
+  let varDefToFileChilds = ({name, value, pos}: var_def): array<fileChild> => {
     if value->isLitLoggedValue {
       [
         Paragraph.create'({
@@ -412,7 +410,7 @@ module Docx = {
         Paragraph.create'({
           heading: #Heading3,
           children: [
-            TextRun.create("Explications pour l'étape de calcul "),
+            TextRun.create("Explication pour l'étape de calcul "),
             linkToSection(id, title),
           ],
         }),
