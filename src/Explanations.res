@@ -21,7 +21,7 @@ module SectionId = UId.Int.Make()
 
 type rec section = {
   id: SectionId.t,
-  parent?: SectionId.t,
+  parent: SectionId.t,
   title: string,
   inputs: array<var_def>,
   outputs: array<var_def>,
@@ -82,6 +82,7 @@ let parseRoot = (ctx: parseCtx, events: array<event>): section => {
   {
     id: SectionId.root,
     title: firstOutput.name->Utils.getSectionTitle,
+    parent: SectionId.root,
     inputs: [],
     outputs,
     explanations: explanations->parseExplanations(ctx),
@@ -98,7 +99,7 @@ let fromEvents = (events: array<event>): sectionMap => {
 module Docx = {
   open Docx
 
-  let linkToSection = (id: SectionId.t, _title: string): Docx.paragraphChild => {
+  let linkToSection = (id: SectionId.t): Docx.paragraphChild => {
     InternalHyperlink.create({
       anchor: `section-${id->Int.toString}`,
       children: [
@@ -349,22 +350,14 @@ module Docx = {
           ->Array.mapWithIndex((expl, i) => {
             let isLast = i == nbRefs - 1
             switch expl {
-            | Ref(id) => {
-                let {title} =
-                  explanationSectionMap
-                  ->Map.get(id)
-                  ->Utils.getJsErr(
-                    `Section ${id->Int.toString} not found in [explanationSectionMap]`,
-                  )
-                [
-                  linkToSection(id, title),
-                  if isLast {
-                    TextRun.create(".")
-                  } else {
-                    TextRun.create(", ")
-                  },
-                ]
-              }
+            | Ref(id) => [
+                linkToSection(id),
+                if isLast {
+                  TextRun.create(".")
+                } else {
+                  TextRun.create(", ")
+                },
+              ]
             | _ => []
             }
           })
@@ -378,13 +371,13 @@ module Docx = {
     explanationSectionMap
     ->Map.entries
     ->Iterator.toArray
-    ->Array.flatMap(((id, {title, inputs, outputs, explanations})) => {
+    ->Array.flatMap(((id, {title, inputs, outputs, explanations, parent})) => {
       let inputParagraphs = [
         Paragraph.create'({
           heading: #Heading3,
           children: [
             TextRun.create("Entrées utilisées pour l'étape de calcul "),
-            linkToSection(id, title),
+            linkToSection(id),
           ],
         }),
       ]->Array.concat(
@@ -402,36 +395,27 @@ module Docx = {
                 ? "Valeurs calculées dans l'étape de calcul "
                 : "Valeur calculée dans l'étape de calcul ",
             ),
-            linkToSection(id, title),
+            linkToSection(id),
           ],
         }),
       ]->Array.concat(outputs->Array.flatMap(varDefToFileChilds))
       let explanationsParagraphs = [
         Paragraph.create'({
           heading: #Heading3,
-          children: [
-            TextRun.create("Explication pour l'étape de calcul "),
-            linkToSection(id, title),
-          ],
+          children: [TextRun.create("Explication pour l'étape de calcul "), linkToSection(id)],
         }),
       ]->Array.concat(
         explanations->Array.flatMap(expl =>
           switch expl {
-          | Ref(id) => {
-              let section =
-                explanationSectionMap
-                ->Map.get(id)
-                ->Utils.getJsErr(`Section ${id->Int.toString} not found in [explanationSectionMap]`)
-              [
-                Paragraph.create'({
-                  children: [
-                    TextRun.create("Calcul de l'étape "),
-                    linkToSection(id, section.title),
-                    TextRun.create("."),
-                  ],
-                }),
-              ]
-            }
+          | Ref(id) => [
+              Paragraph.create'({
+                children: [
+                  TextRun.create("Calcul de l'étape "),
+                  linkToSection(id),
+                  TextRun.create("."),
+                ],
+              }),
+            ]
           | Def(varDef) => varDefToFileChilds(varDef)
           }
         ),
@@ -443,6 +427,17 @@ module Docx = {
           Paragraph.create'({
             heading: #Heading2,
             children: [bookmarkSection(id, title)],
+          }),
+          Paragraph.create'({
+            children: if parent != SectionId.root {
+              [
+                TextRun.create("Cette étape de calcul intervient dans l'étape "),
+                linkToSection(parent),
+                TextRun.create("."),
+              ]
+            } else {
+              []
+            },
           }),
         ]
         ->Array.concat(inputParagraphs)
