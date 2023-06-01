@@ -171,3 +171,10 @@ let durationToString = (d: string) => {
   | Some(_) | None => Js.Exn.raiseError("Got an invalid duration: " ++ d)
   }
 }
+
+let isArrayLoggedValue = (v: LoggedValue.t): bool => {
+  switch v {
+  | Array(_) => true
+  | _ => false
+  }
+}

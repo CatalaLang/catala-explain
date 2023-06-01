@@ -182,21 +182,8 @@ module Docx = {
 
   let rec loggedValueToFileChilds = (~level: int=0, val: LoggedValue.t): array<fileChild> => {
     switch val {
-    | Enum(_, (_, val)) =>
-      // [
-      //   Paragraph.create'({
-      //     text: name,
-      //     heading: lvl,
-      //   }),
-      /* ]-> Array.concat( */
-      val->loggedValueToFileChilds(~level)
+    | Enum(_, (_, val)) => val->loggedValueToFileChilds(~level)
     | Struct(_, l) =>
-      // [
-      //   Paragraph.create'({
-      //     text: infos->Utils.getSubScopeId,
-      //     heading: lvl,
-      //   }),
-      // ]->Array.concat(
       l
       ->List.toArray
       ->Array.filter(((_, value)) => Utils.loggedValueIsEmbeddable(value))
@@ -204,28 +191,69 @@ module Docx = {
       ->Array.flatMap(((field, value)) => {
         switch value {
         | Array([]) => []
+        | Array(_) =>
+          [
+            Paragraph.create'({
+              children: [
+                TextRun.create("Le champ "),
+                TextRun.create'({
+                  text: field,
+                  style: "VariableName",
+                }),
+                TextRun.create(" est un ensemble contenant : "),
+              ],
+              bullet: {level: level},
+            }),
+          ]->Array.concat(value->loggedValueToFileChilds(~level=level + 1))
         | v if v->isLitLoggedValue => [
             Paragraph.create'({
-              children: [TextRun.create(`${field} : `), value->litLoggedValueToParagraphChild],
+              children: [
+                TextRun.create("Le champ "),
+                TextRun.create'({
+                  text: field,
+                  style: "VariableName",
+                }),
+                TextRun.create(" vaut "),
+                value->litLoggedValueToParagraphChild,
+              ],
               bullet: {level: level},
             }),
           ]
         | _ =>
           [
             Paragraph.create'({
-              text: `${field} : `,
+              children: [
+                TextRun.create("Le champ "),
+                TextRun.create'({
+                  text: field,
+                  style: "VariableName",
+                }),
+                TextRun.create(" vaut : "),
+              ],
               bullet: {level: level},
             }),
           ]->Array.concat(value->loggedValueToFileChilds(~level))
         }
       })
-    // )
-    | Array(val) => val->Array.flatMap(loggedValueToFileChilds(_, ~level=level + 1))
+    | Array(val) =>
+      let id = ref(-1)
+      val->Array.flatMap(elem => {
+        id := id.contents + 1
+        [
+          Paragraph.create'({
+            children: [TextRun.create(`l'élément n°${id.contents->Int.toString} : `)],
+            bullet: {level: level},
+          }),
+        ]->Array.concat(elem->loggedValueToFileChilds(~level=level + 1))
+      })
     | _ => []
     }
   }
 
-  let varDefToFileChilds = ({name, value, pos}: var_def): array<fileChild> => {
+  let varDefToFileChilds = ({name, value, pos, fun_calls}: var_def): array<fileChild> => {
+    // TODO: manage fun calls
+    ignore(fun_calls)
+
     if value->isLitLoggedValue {
       [
         Paragraph.create'({
@@ -257,7 +285,7 @@ module Docx = {
               italics: true,
             }),
             TextRun.create(`) `),
-            TextRun.create(` vaut : `),
+            TextRun.create(` ${value->Utils.isArrayLoggedValue ? "est composé de" : "vaut"} : `),
             pos->Option.mapWithDefault(TextRun.create(""), Utils.getLinkToSourcePos),
           ],
         }),
