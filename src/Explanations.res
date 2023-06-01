@@ -388,31 +388,28 @@ module Docx = {
             linkToSection(id, title),
           ],
         }),
-        Paragraph.create'({
-          children: explanations->Array.map(expl =>
-            switch expl {
-            | Ref(id) => {
-                let section =
-                  explanationSectionMap
-                  ->Map.get(id)
-                  ->Utils.getJsErr(
-                    `Section ${id->Int.toString} not found in [explanationSectionMap]`,
-                  )
-                InternalHyperlink.create({
-                  anchor: `section-${id->Int.toString}`,
+      ]->Array.concat(
+        explanations->Array.flatMap(expl =>
+          switch expl {
+          | Ref(id) => {
+              let section =
+                explanationSectionMap
+                ->Map.get(id)
+                ->Utils.getJsErr(`Section ${id->Int.toString} not found in [explanationSectionMap]`)
+              [
+                Paragraph.create'({
                   children: [
-                    TextRun.create'({
-                      text: `${section.title} - ${id->Int.toString}`,
-                      style: "VariableName",
-                    }),
+                    TextRun.create("Calcul de l'étape "),
+                    linkToSection(id, section.title),
+                    TextRun.create("."),
                   ],
-                })
-              }
-            | _ => TextRun.create("")
+                }),
+              ]
             }
-          ),
-        }),
-      ]
+          | Def(varDef) => varDefToFileChilds(varDef)
+          }
+        ),
+      )
       if id == SectionId.root {
         []
       } else {

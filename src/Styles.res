@@ -14,7 +14,7 @@ let default: Document.defaultStyle = {
       run: {
         font: "Marianne",
         color: "3a3a3a",
-        size: 16,
+        size: 18,
       },
     },
     heading1: {
@@ -87,7 +87,7 @@ let characterStyles: array<Docx.Document.style> = [
     run: {
       font: "Fira Mono",
       bold: true,
-      size: 14,
+      size: 16,
       color: "161616",
     },
   },
