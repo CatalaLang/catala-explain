@@ -97,12 +97,12 @@ let fromEvents = (events: array<event>): sectionMap => {
 module Docx = {
   open Docx
 
-  let linkToSection = (id: SectionId.t, title: string): Docx.paragraphChild => {
+  let linkToSection = (id: SectionId.t, _title: string): Docx.paragraphChild => {
     InternalHyperlink.create({
       anchor: `section-${id->Int.toString}`,
       children: [
         TextRun.create'({
-          text: title,
+          text: `n°${id->Int.toString}`,
           style: "Hyperlink",
         }),
       ],
@@ -114,7 +114,7 @@ module Docx = {
       id: `section-${id->Int.toString}`,
       children: [
         TextRun.create'({
-          text: title,
+          text: `Étape n°${id->Int.toString} : ${title}`,
         }),
       ],
     })
@@ -225,7 +225,7 @@ module Docx = {
     }
   }
 
-  let inputToFileChilds = ({name, value, pos}: var_def): array<fileChild> => {
+  let varDefToFileChilds = ({name, value, pos}: var_def): array<fileChild> => {
     if value->isLitLoggedValue {
       [
         Paragraph.create'({
@@ -235,7 +235,7 @@ module Docx = {
               text: `${name->Utils.lastExn}`,
               style: "VariableName",
             }),
-            TextRun.create(` vaut dans ce cas `),
+            TextRun.create(` vaut `),
             value->litLoggedValueToParagraphChild,
             TextRun.create(`. `),
             pos->Option.mapWithDefault(TextRun.create(""), Utils.getLinkToSourcePos),
@@ -257,7 +257,7 @@ module Docx = {
               italics: true,
             }),
             TextRun.create(`) `),
-            TextRun.create(` vaut dans ce cas : `),
+            TextRun.create(` vaut : `),
             pos->Option.mapWithDefault(TextRun.create(""), Utils.getLinkToSourcePos),
           ],
         }),
@@ -365,7 +365,7 @@ module Docx = {
         inputs
         ->Array.filter(({value}) => Utils.loggedValueIsEmbeddable(value))
         ->Array.sort((a, b) => Utils.loggedValueCompare(a.value, b.value))
-        ->Array.flatMap(inputToFileChilds(_)),
+        ->Array.flatMap(varDefToFileChilds(_)),
       )
       let outputParagraphs = [
         Paragraph.create'({
@@ -379,24 +379,7 @@ module Docx = {
             linkToSection(id, title),
           ],
         }),
-      ]->Array.concat(
-        outputs->Array.map(output =>
-          Paragraph.create'({
-            children: [
-              TextRun.create'({
-                text: output.name->Utils.lastExn,
-              }),
-              TextRun.create(` : `),
-              if output.value->isLitLoggedValue {
-                Console.log2("DEBUG:", output.value->LoggedValue.loggedValueToString(0))
-                output.value->litLoggedValueToParagraphChild
-              } else {
-                TextRun.create("TODO (non-literal value)")
-              },
-            ],
-          })
-        ),
-      )
+      ]->Array.concat(outputs->Array.flatMap(varDefToFileChilds))
       let explanationsParagraphs = [
         Paragraph.create'({
           heading: #Heading3,
