@@ -1,22 +1,5 @@
 open CatalaRuntime
 
-/** Manages to generates unique scope call name */
-module SubScopeName = {
-  module Id = UId.Int.Make()
-
-  type t = {
-    id: Id.t,
-    name: string,
-    infos: information,
-  }
-
-  let get = (infos: information): t => {
-    let id = Id.fresh()
-    let name = Utils.getSubScopeId(infos)
-    {id, name, infos}
-  }
-}
-
 module SectionId = UId.Int.Make()
 
 type rec section = {
@@ -290,18 +273,6 @@ module Docx = {
         }),
       ]->Array.concat(value->loggedValueToFileChilds)
     }
-  }
-
-  let informationToParagraphChilds = (infos: CatalaRuntime.information): array<paragraphChild> => {
-    let length = infos->List.length
-    infos
-    ->List.toArray
-    ->Array.mapWithIndex((info, i) => {
-      TextRun.create'({
-        text: info,
-        style: i == length - 1 ? "VariableName" : "ScopeName",
-      })
-    })
   }
 
   @raises(Error.t)
