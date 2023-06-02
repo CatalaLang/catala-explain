@@ -1,4 +1,5 @@
 open Utils
+open JSONUtils
 
 type rec t =
   | Section({title: string, items: t})
@@ -63,7 +64,7 @@ let fromJSON = (~json: JSON.t, ~schema: JSON.t, ~uiSchema: JSON.t): t => {
 
             // FIXME: should correctly extract the name from the schema
             Field({
-              name: name == " " ? key : name,
+              name: name->Option.getWithDefault(key),
               value: value->aux(newPath),
               tabLabel,
             })
