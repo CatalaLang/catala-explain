@@ -1,32 +1,16 @@
 open Docx
 open Promise
 
-// let rec eventToFileChild = (event: CatalaRuntime.event) => {
-//   open CatalaRuntime
-//
-//   switch event {
-//   | SubScopeCall({sname, sbody}) =>
-//     let subScopeName = Utils.getSubScopeId(sname)
-//     let subScopeParagaph = Paragraph.create'({
-//       children: [
-//         Bookmark.create({
-//           id: subScopeName,
-//           children: [TextRun.create("SubScopeCall: " ++ subScopeName)],
-//         }),
-//       ],
-//     })
-//
-//     [subScopeParagaph]->Array.concat(sbody->List.toArray->Array.flatMap(eventToFileChild))
-//   | _ => []
-//   }
-// }
-
-let getUserInputDocSection = (~userInputs: JSON.t, ~jsonSchema: JSON.t): Document.section => {
+let getUserInputDocSection = (
+  ~userInputs: JSON.t,
+  ~schema: JSON.t,
+  ~uiSchema: JSON.t,
+): Document.section => {
   {
     children: [
       Paragraph.create'({text: "Entrées du programme", heading: #Heading1}),
     ]->Array.concat(
-      UserInputs.fromJSON(~json=userInputs, ~schema=jsonSchema)->UserInputs.Docx.toFileChild,
+      UserInputs.fromJSON(~json=userInputs, ~schema, ~uiSchema)->UserInputs.Docx.toFileChild,
     ),
   }
 }
@@ -64,7 +48,8 @@ type options = {
   creator?: string,
   description?: string,
   filename: string,
-  jsonSchema?: JSON.t,
+  schema: JSON.t,
+  uiSchema: JSON.t,
 }
 
 let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntime.event>) => {
@@ -88,10 +73,7 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
       //     }),
       //   ],
       // },
-      getUserInputDocSection(
-        ~userInputs,
-        ~jsonSchema=opts.jsonSchema->Option.getWithDefault(JSON.Encode.null),
-      ),
+      getUserInputDocSection(~userInputs, ~schema=opts.schema, ~uiSchema=opts.uiSchema),
       explanationSectionMap->getResultDocSection,
       explanationSectionMap->getExplanationsDocSection,
     ],

@@ -5,7 +5,8 @@ type options = {
   /** The name of the file to generate. */
   filename: string,
   /** The schema of the user inputs, used for having explicit input form labels. */
-  jsonSchema?: JSON.t,
+  schema: JSON.t,
+  uiSchema: JSON.t,
 }
 
 /**

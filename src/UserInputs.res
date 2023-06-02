@@ -3,7 +3,7 @@ open Utils
 type rec t =
   | Section({title: string, items: t})
   | Fields(array<t>)
-  | Field({name: string, value: t})
+  | Field({name: string, value: t, tabLabel: option<string>})
   | Array(array<t>)
   | LitEnum(string)
   | LitDate(string)
@@ -40,7 +40,7 @@ let getKindName = (obj: JSON.t, _schema: JSON.t): string => {
   }
 }
 
-let fromJSON = (~json: JSON.t, ~schema: JSON.t): t => {
+let fromJSON = (~json: JSON.t, ~schema: JSON.t, ~uiSchema: JSON.t): t => {
   let rec aux = (json: JSON.t, currentPath: list<string>): t => {
     switch JSON.Classify.classify(json) {
     | Object(items) =>
@@ -52,11 +52,20 @@ let fromJSON = (~json: JSON.t, ~schema: JSON.t): t => {
           ->Array.map(((key, value)) => {
             let newPath = currentPath->List.concat(list{key})
             let name = newPath->findTitleInSchema(schema)
+            let tabLabel =
+              uiSchema
+              ->jsonGetPath(list{key, "ui:tabLabel"})
+              ->Option.map(json =>
+                json
+                ->JSON.Decode.string
+                ->getJsErr("'ui:tabLabel' should be a string in the uiSchema")
+              )
 
             // FIXME: should correctly extract the name from the schema
             Field({
               name: name == " " ? key : name,
               value: value->aux(newPath),
+              tabLabel,
             })
           }),
         )
@@ -70,9 +79,7 @@ let fromJSON = (~json: JSON.t, ~schema: JSON.t): t => {
         })
       | _ => failwith("invalid user inputs in [fromJSON]")
       }
-    | Array(items) =>
-      // TODO: add section for each item
-      Array(items->Array.map(item => item->aux(currentPath)))
+    | Array(items) => Array(items->Array.map(item => item->aux(currentPath)))
     | String(s) =>
       if isDate(s) {
         LitDate(s)
@@ -124,19 +131,33 @@ module Docx = {
     }
   }
 
-  let toFileChild = (userInputs: t /* , _jsonSchema: JSON.t */): array<fileChild> => {
-    let rec aux = (userInputs: t, level: HeadingLevel.t) => {
-      switch userInputs {
+  let toFileChild = (userInputs: t): array<fileChild> => {
+    let rec aux = (~input: t, level: HeadingLevel.t, ~prevInput: t) => {
+      switch input {
       | Section({title, items}) =>
         [
           Paragraph.create'({
             children: [TextRun.create(title)],
             heading: level,
           }),
-        ]->Array.concat(aux(items, getNextHeadingLevel(level)))
+        ]->Array.concat(aux(~input=items, ~prevInput=input, getNextHeadingLevel(level)))
       | Array(inputs) =>
-        // Need to have dot list ?
-        inputs->Array.flatMap(input => aux(input, getNextHeadingLevel(level)))
+        let id = ref(-1)
+        inputs->Array.flatMap(arrayInput => {
+          id := id.contents + 1
+          let nxtLvl = getNextHeadingLevel(level)
+          let elemLabel = switch prevInput {
+          | Field({tabLabel: Some(label)}) => label
+          | _ => "Élément"
+          }
+
+          [
+            Paragraph.create'({
+              children: [TextRun.create(`${elemLabel} n°${id.contents->Int.toString}`)],
+              heading: nxtLvl,
+            }),
+          ]->Array.concat(aux(~input=arrayInput, ~prevInput=input, getNextHeadingLevel(nxtLvl)))
+        })
       | Fields(items) =>
         items
         ->Array.sort((a, b) => {
@@ -147,23 +168,24 @@ module Docx = {
           | _ => 1
           }
         })
-        ->Array.flatMap(input => aux(input, getNextHeadingLevel(level)))
+        ->Array.flatMap(aux(~input=_, ~prevInput=input, getNextHeadingLevel(level)))
       | Field({name, value}) if isLiteral(value) => [
           Paragraph.create'({
             children: [TextRun.create(`${name} : `), litToStyledTextRun(value)],
           }),
         ]
       | Field({value}) if isEmpty(value) => []
+
       | Field({name, value}) =>
         [
           Paragraph.create'({
             children: [TextRun.create(name)],
             heading: level,
           }),
-        ]->Array.concat(aux(value, getNextHeadingLevel(level)))
+        ]->Array.concat(aux(~input=value, ~prevInput=input, getNextHeadingLevel(level)))
       | _ => failwith("invalid user inputs in [userInputsToFileChild]")
       }
     }
-    aux(userInputs, #Heading2)
+    aux(~input=userInputs, ~prevInput=userInputs, #Heading2)
   }
 }
