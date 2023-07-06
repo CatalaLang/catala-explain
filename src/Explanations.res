@@ -403,6 +403,7 @@ module Docx = {
           Paragraph.create'({
             heading: #Heading2,
             children: [bookmarkSection(id, title)],
+            pageBreakBefore: true,
           }),
           Paragraph.create'({
             children: if parent != SectionId.root {

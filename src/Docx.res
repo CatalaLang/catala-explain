@@ -172,6 +172,7 @@ module TableOfContents = {
   external create': properties => fileChild = "TableOfContents"
 }
 
+/** @see https://docx.js.org/api/classes/Paragraph.html */
 module Paragraph = {
   type bullet = {level: int}
 
@@ -183,6 +184,7 @@ module Paragraph = {
     bullet?: bullet,
     style?: string,
     alignment?: AlignmentType.t,
+    pageBreakBefore?: bool,
   }
 
   @module("docx") @new
