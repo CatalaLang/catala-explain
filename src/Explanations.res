@@ -83,16 +83,23 @@ let fromEvents = (events: array<event>): sectionMap => {
 module Docx = {
   open Docx
 
-  let linkToSection = (id: SectionId.t): Docx.paragraphChild => {
-    InternalHyperlink.create({
-      anchor: `section-${id->Int.toString}`,
-      children: [
-        TextRun.create'({
-          text: `n°${id->Int.toString}`,
-          style: "Hyperlink",
-        }),
-      ],
-    })
+  let linkToSection = (id: SectionId.t): array<Docx.paragraphChild> => {
+    let bookmarkId = `section-${id->Int.toString}`
+
+    [
+      InternalHyperlink.create({
+        anchor: bookmarkId,
+        children: [
+          TextRun.create'({
+            text: `n°${id->Int.toString}`,
+            style: "Hyperlink",
+          }),
+        ],
+      }),
+      TextRun.create(` (p. `),
+      PageReference.create(bookmarkId),
+      TextRun.create(`)`),
+    ]
   }
 
   let bookmarkSection = (id: SectionId.t, title: string): Docx.paragraphChild => {
@@ -322,14 +329,14 @@ module Docx = {
           ->Array.mapWithIndex((expl, i) => {
             let isLast = i == nbRefs - 1
             switch expl {
-            | Ref(id) => [
-                linkToSection(id),
+            | Ref(id) =>
+              linkToSection(id)->Array.concat([
                 if isLast {
                   TextRun.create(".")
                 } else {
                   TextRun.create(", ")
                 },
-              ]
+              ])
             | _ => []
             }
           })
@@ -348,10 +355,9 @@ module Docx = {
       let inputParagraphs = [
         Paragraph.create'({
           heading: #Heading3,
-          children: [
-            TextRun.create("Entrées utilisées pour l'étape de calcul "),
+          children: [TextRun.create("Entrées utilisées pour l'étape de calcul ")]->Array.concat(
             linkToSection(id),
-          ],
+          ),
         }),
       ]->Array.concat(
         inputs
@@ -368,25 +374,22 @@ module Docx = {
                 ? "Valeurs calculées dans l'étape de calcul "
                 : "Valeur calculée dans l'étape de calcul ",
             ),
-            linkToSection(id),
-          ],
+          ]->Array.concat(linkToSection(id)),
         }),
       ]->Array.concat(outputs->Array.flatMap(varDefToFileChilds))
       let explanationsParagraphs = [
         Paragraph.create'({
           heading: #Heading3,
-          children: [TextRun.create("Explication pour l'étape de calcul "), linkToSection(id)],
+          children: [TextRun.create("Explication pour l'étape de calcul ")]->Array.concat(
+            linkToSection(id),
+          ),
         }),
       ]->Array.concat(
         explanations->Array.flatMap(expl =>
           switch expl {
           | Ref(id) => [
               Paragraph.create'({
-                children: [
-                  TextRun.create("Calcul de l'étape "),
-                  linkToSection(id),
-                  TextRun.create("."),
-                ],
+                children: [TextRun.create("Calcul de l'étape ")]->Array.concat(linkToSection(id)),
               }),
             ]
           | Def(varDef) => varDefToFileChilds(varDef)
@@ -403,11 +406,9 @@ module Docx = {
           }),
           Paragraph.create'({
             children: if parent != SectionId.root {
-              [
-                TextRun.create("Cette étape de calcul intervient dans l'étape "),
+              [TextRun.create("Cette étape de calcul intervient dans l'étape ")]->Array.concat(
                 linkToSection(parent),
-                TextRun.create("."),
-              ]
+              )
             } else {
               []
             },

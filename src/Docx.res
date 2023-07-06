@@ -127,6 +127,20 @@ module InternalHyperlink = {
   external create: options => paragraphChild = "InternalHyperlink"
 }
 
+/** @see https://docx.js.org/api/classes/PageReference.html */
+module PageReference = {
+  type options = {
+    hyperlink?: bool,
+    useRelativePosition?: bool,
+  }
+
+  @module("docx") @new
+  external create: string => paragraphChild = "PageReference"
+
+  @module("docx") @new
+  external create': (string, options) => paragraphChild = "PageReference"
+}
+
 /** @see https://docx.js.org/api/classes/ExternalHyperlink.html */
 module ExternalHyperlink = {
   type options = {
