@@ -3,7 +3,28 @@ type fileChild
 /** @see https://docx.js.org/api/types/ParagraphChild.html */
 type paragraphChild
 
+/** @see https://docx.js.org/api/enums/PageNumber.html */
+module PageNumber = {
+  type t
+
+  @module("docx") @scope("PageNumber")
+  external current: t = "CURRENT"
+
+  @module("docx") @scope("PageNumber")
+  external totalPages: t = "TOTAL_PAGES"
+
+  @module("docx") @scope("PageNumber")
+  external totalInSection: t = "TOTAL_PAGES_IN_SECTION"
+}
+
 module TextRun = {
+  /** @see https://docx.js.org/api/interfaces/IRunOptions.html#children */
+  module Children = {
+    type t
+    external string: string => t = "%identity"
+    external pageNumber: PageNumber.t => t = "%identity"
+  }
+
   type underline = {
     color?: string,
     @as("type")
@@ -37,6 +58,8 @@ module TextRun = {
     style?: string,
     color?: string,
     underline?: underline,
+    // NOTE(@EmileRolley): little hack to accept polymorphic array
+    children?: array<Children.t>,
   }
 
   @module("docx") @new
@@ -155,13 +178,49 @@ module Paragraph = {
   external create': options => fileChild = "Paragraph"
 }
 
+/** @see https://docx.js.org/api/interfaces/IHeaderOptions.html */
+type header_options = {
+  // NOTE(@EmileRolley): should only accept Paragraph or Table
+  children: array<fileChild>,
+}
+
+/** @see https://docx.js.org/api/classes/Header.html */
+module Header = {
+  type t
+
+  @module("docx") @new
+  external create: header_options => t = "Header"
+}
+
+/** @see https://docx.js.org/api/classes/Footer.html */
+module Footer = {
+  type t
+
+  @module("docx") @new
+  external create: header_options => t = "Footer"
+}
+
 module Document = {
   type t
 
   type section_properties = {}
 
+  type footers = {
+    default?: Footer.t,
+    first?: Footer.t,
+    even?: Footer.t,
+  }
+
+  type headers = {
+    default?: Header.t,
+    first?: Header.t,
+    even?: Header.t,
+  }
+
   type section = {
     properties?: section_properties,
+    headers?: headers,
+    footers?: footers,
     children: array<fileChild>,
   }
 

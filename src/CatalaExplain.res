@@ -52,6 +52,8 @@ type options = {
   uiSchema: JSON.t,
 }
 
+let version = "0.1.0"
+
 let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntime.event>) => {
   let explanationSectionMap = events->Explanations.fromEvents
   Document.create({
@@ -59,20 +61,63 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
     creator: opts.creator->Option.getUnsafe,
     description: opts.description->Option.getUnsafe,
     sections: [
-      // {
-      //   children: [
-      //     Paragraph.create'({
-      //       text: opts.title->Option.getWithDefault("Explication individuelle du calcul"),
-      //       heading: #Title,
-      //       alignment: #center,
-      //     }),
-      //     Paragraph.create'({
-      //       text: opts.description->Option.getUnsafe,
-      //       heading: #Heading2,
-      //       alignment: #center,
-      //     }),
-      //   ],
-      // },
+      {
+        headers: {
+          default: Header.create({
+            children: [
+              Paragraph.create'({
+                alignment: #right,
+                children: [
+                  TextRun.create(`catala-explain v${version}`),
+                  TextRun.create(" - "),
+                  TextRun.create(
+                    `${Date.now()
+                      ->Date.fromTime
+                      ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #short})}`,
+                  ),
+                ],
+              }),
+            ],
+          }),
+        },
+        footers: {
+          default: Footer.create({
+            children: [
+              Paragraph.create'({
+                alignment: #right,
+                children: [
+                  TextRun.create'({
+                    children: [
+                      TextRun.Children.pageNumber(PageNumber.current),
+                      TextRun.Children.string(" / "),
+                      TextRun.Children.pageNumber(PageNumber.totalPages),
+                    ],
+                  }),
+                ],
+              }),
+            ],
+          }),
+        },
+        children: [
+          Paragraph.create'({
+            text: opts.title->Option.getWithDefault("Explication individuelle du calcul"),
+            heading: #Title,
+            alignment: #center,
+          }),
+          Paragraph.create'({
+            text: opts.description->Option.getUnsafe,
+            heading: #Heading2,
+            alignment: #center,
+          }),
+          Paragraph.create'({
+            text: `Généré le ${Date.now()
+              ->Date.fromTime
+              ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long})}`,
+            heading: #Heading4,
+            alignment: #center,
+          }),
+        ],
+      },
       getUserInputDocSection(~userInputs, ~schema=opts.schema, ~uiSchema=opts.uiSchema),
       explanationSectionMap->getResultDocSection,
       explanationSectionMap->getExplanationsDocSection,
