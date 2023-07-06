@@ -1,6 +1,6 @@
 /* Core logic generating docx from Catala events */
 
-module SectionId: UId.Int.Id
+module SectionId: UId.Id
 
 /**
   A section is a step of the computation, with a title, a list of inputs and

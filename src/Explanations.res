@@ -73,6 +73,7 @@ let parseRoot = (ctx: parseCtx, events: array<event>): section => {
 }
 
 let fromEvents = (events: array<event>): sectionMap => {
+  SectionId.reset()
   let sections = Map.make()
   let root = parseRoot({sections, currentId: SectionId.root}, events)
   sections->Map.set(root.id, root)
@@ -342,6 +343,7 @@ module Docx = {
     explanationSectionMap
     ->Map.entries
     ->Iterator.toArray
+    ->Array.sort(((id, _), (id', _)) => SectionId.compare(id, id'))
     ->Array.flatMap(((id, {title, inputs, outputs, explanations, parent})) => {
       let inputParagraphs = [
         Paragraph.create'({
