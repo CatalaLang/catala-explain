@@ -83,7 +83,7 @@ let fromEvents = (events: array<event>): sectionMap => {
 module Docx = {
   open Docx
 
-  let linkToSection = (id: SectionId.t): array<Docx.paragraphChild> => {
+  let linkToSection = (id: SectionId.t): array<Docx.paragraph_child> => {
     let bookmarkId = `section-${id->Int.toString}`
 
     [
@@ -102,7 +102,7 @@ module Docx = {
     ]
   }
 
-  let bookmarkSection = (id: SectionId.t, title: string): Docx.paragraphChild => {
+  let bookmarkSection = (id: SectionId.t, title: string): Docx.paragraph_child => {
     Bookmark.create({
       id: `section-${id->Int.toString}`,
       children: [
@@ -124,7 +124,7 @@ module Docx = {
     }
   }
 
-  let litLoggedValueToParagraphChild = (val: LoggedValue.t): paragraphChild => {
+  let litLoggedValueToParagraphChild = (val: LoggedValue.t): paragraph_child => {
     switch val {
     | Bool(b) =>
       // TODO: manage the language
@@ -173,7 +173,7 @@ module Docx = {
     }
   }
 
-  let rec loggedValueToFileChilds = (~level: int=0, val: LoggedValue.t): array<fileChild> => {
+  let rec loggedValueToFileChilds = (~level: int=0, val: LoggedValue.t): array<file_child> => {
     switch val {
     | Enum(_, (_, val)) => val->loggedValueToFileChilds(~level)
     | Struct(_, l) =>
@@ -243,7 +243,7 @@ module Docx = {
     }
   }
 
-  let varDefToFileChilds = ({name, value, pos}: var_def): array<fileChild> => {
+  let varDefToFileChilds = ({name, value, pos}: var_def): array<file_child> => {
     if value->isLitLoggedValue {
       [
         Paragraph.create'({
@@ -284,7 +284,7 @@ module Docx = {
   }
 
   @raises(Error.t)
-  let outputToFileChilds = (explanationSectionMap: sectionMap): array<fileChild> => {
+  let outputToFileChilds = (explanationSectionMap: sectionMap): array<file_child> => {
     let {outputs, explanations} =
       explanationSectionMap
       ->Map.get(SectionId.root)
@@ -346,7 +346,7 @@ module Docx = {
     ]
   }
 
-  let explanationsToFileChilds = (explanationSectionMap: sectionMap): array<fileChild> => {
+  let explanationsToFileChilds = (explanationSectionMap: sectionMap): array<file_child> => {
     explanationSectionMap
     ->Map.entries
     ->Iterator.toArray

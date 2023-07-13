@@ -27,6 +27,6 @@ type sectionMap = RescriptCore.Map.t<SectionId.t, section>
 let fromEvents: array<CatalaRuntime.event> => sectionMap
 
 module Docx: {
-  let outputToFileChilds: sectionMap => array<Docx.fileChild>
-  let explanationsToFileChilds: sectionMap => array<Docx.fileChild>
+  let outputToFileChilds: sectionMap => array<Docx.file_child>
+  let explanationsToFileChilds: sectionMap => array<Docx.file_child>
 }

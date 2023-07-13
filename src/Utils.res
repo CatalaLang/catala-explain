@@ -77,7 +77,7 @@ let rec loggedValueKindToText = (value: LoggedValue.t): string => {
   }
 }
 
-let getLinkToSourcePos = ({filename, start_line, end_line}: sourcePosition): paragraphChild => {
+let getLinkToSourcePos = ({filename, start_line, end_line}: sourcePosition): paragraph_child => {
   ExternalHyperlink.create({
     children: [
       TextRun.create("["),

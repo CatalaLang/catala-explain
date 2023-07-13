@@ -21,5 +21,5 @@ type rec t =
 let fromJSON: (~json: JSON.t, ~schema: JSON.t, ~uiSchema: JSON.t) => t
 
 module Docx: {
-  let toFileChild: t => array<Docx.fileChild>
+  let toFileChild: t => array<Docx.file_child>
 }

@@ -52,6 +52,10 @@ let fromJSON = (~json: JSON.t, ~schema: JSON.t, ~uiSchema: JSON.t): t => {
           ->Dict.toArray
           ->Array.map(((key, value)) => {
             let newPath = currentPath->List.concat(list{key})
+            if key == "nationalite" {
+              Console.log2("=====> DEBUG newPath:", newPath->List.toArray)
+              // Console.log2("=====> DEBUG name:", name)
+            }
             let name = newPath->findTitleInSchema(schema)
             let tabLabel =
               uiSchema
@@ -62,9 +66,11 @@ let fromJSON = (~json: JSON.t, ~schema: JSON.t, ~uiSchema: JSON.t): t => {
                 ->getJsErr("'ui:tabLabel' should be a string in the uiSchema")
               )
 
+            let name = name->Option.getWithDefault(key)
+
             // FIXME: should correctly extract the name from the schema
             Field({
-              name: name->Option.getWithDefault(key),
+              name,
               value: value->aux(newPath),
               tabLabel,
             })
@@ -97,7 +103,7 @@ let fromJSON = (~json: JSON.t, ~schema: JSON.t, ~uiSchema: JSON.t): t => {
 
 module Docx = {
   open Docx
-  let litToStyledTextRun = (lit: t): paragraphChild => {
+  let litToStyledTextRun = (lit: t): paragraph_child => {
     switch lit {
     | LitBool(b) =>
       // TODO: manage the language
@@ -132,7 +138,7 @@ module Docx = {
     }
   }
 
-  let toFileChild = (userInputs: t): array<fileChild> => {
+  let toFileChild = (userInputs: t): array<file_child> => {
     let rec aux = (~input: t, level: HeadingLevel.t, ~prevInput: t) => {
       switch input {
       | Section({title, items}) =>
