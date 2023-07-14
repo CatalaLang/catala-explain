@@ -14,43 +14,43 @@ let default: Document.defaultStyle = {
       run: {
         font: "Marianne",
         color: "3a3a3a",
-        size: 18,
+        size: "8pt",
       },
     },
     heading1: {
       run: {
         ...baseHeadingStyleRun,
-        size: 34,
+        size: "34pt",
       },
     },
     heading2: {
       run: {
         ...baseHeadingStyleRun,
-        size: 29,
+        size: "15pt",
       },
     },
     heading3: {
       run: {
         ...baseHeadingStyleRun,
-        size: 25,
+        size: "12pt",
       },
     },
     heading4: {
       run: {
         ...baseHeadingStyleRun,
-        size: 22,
+        size: "22pt",
       },
     },
     heading5: {
       run: {
         ...baseHeadingStyleRun,
-        size: 20,
+        size: "20pt",
       },
     },
     heading6: {
       run: {
         ...baseHeadingStyleRun,
-        size: 18,
+        size: "18pt",
       },
     },
     hyperlink: {
@@ -87,7 +87,7 @@ let characterStyles: array<Docx.Document.style> = [
     run: {
       font: "Fira Mono",
       bold: true,
-      size: 16,
+      size: "8pt",
       color: "161616",
     },
   },
@@ -173,6 +173,16 @@ let characterStyles: array<Docx.Document.style> = [
         color: "161616",
         type_: #single,
       },
+    },
+  },
+  {
+    id: "NormalTableCellText",
+    name: "NormalTableCellText",
+    basedOn: "Normal",
+    next: "Normal",
+    quickFormat: true,
+    run: {
+      size: "8pt",
     },
   },
 ]

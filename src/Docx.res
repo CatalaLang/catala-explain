@@ -7,8 +7,11 @@ type paragraph_child
 type text_direction = [
   | /** Bottom to top, left to right */ #btLr
   | /** Left to right, top to bottom */ #lrTb
-  | /** Top to bottom, right to left */ #tbR1
+  | /** Top to bottom, right to left */ #tbRl
 ]
+
+/** `${number}mm` | `${number}cm` | `${number}in` | `${number}pt` | `${number}pc` | `${number}pi` */
+type font_size = string
 
 /**
  * @see https://docx.js.org/api/types/UniversalMeasure.html
@@ -140,7 +143,7 @@ module TextRun = {
     break?: int,
     italics?: bool,
     font?: string,
-    size?: int,
+    size?: font_size,
     style?: string,
     color?: string,
     underline?: underline,
@@ -160,23 +163,21 @@ module TextRun = {
 
 #both == JUSTIFIED 
 */
-module AlignmentType = {
-  type t = [
-    | #start
-    | #center
-    | #end
-    | #both
-    | #distribute
-    | #left
-    | #right
-    | #both
-    | #mediumKashida
-    | #highKashida
-    | #lowKashida
-    | #thaiDistribute
-    | #numTab
-  ]
-}
+type alignment_type = [
+  | #start
+  | #center
+  | #end
+  | #both
+  | #distribute
+  | #left
+  | #right
+  | #both
+  | #mediumKashida
+  | #highKashida
+  | #lowKashida
+  | #thaiDistribute
+  | #numTab
+]
 
 /** @see https://docx.js.org/api/enums/HeadingLevel.html */
 module HeadingLevel = {
@@ -262,6 +263,15 @@ module TableOfContents = {
 module Paragraph = {
   type bullet = {level: int}
 
+  type spacing_options = {
+    after?: int,
+    afterAutoSpacing?: bool,
+    before?: int,
+    beforeAutoSpacing?: bool,
+    line?: int,
+    lineRule?: [#atLeast | #auto | #exact | #exactly],
+  }
+
   type options = {
     text?: string,
     heading?: HeadingLevel.t,
@@ -269,8 +279,9 @@ module Paragraph = {
     children?: array<paragraph_child>,
     bullet?: bullet,
     style?: string,
-    alignment?: AlignmentType.t,
+    alignment?: alignment_type,
     pageBreakBefore?: bool,
+    spacing?: spacing_options,
   }
 
   @module("docx") @new
@@ -282,7 +293,7 @@ module Paragraph = {
 
 /** @see https://docx.js.org/api/types/ITableWidthProperties.html */
 type table_width = {
-  size: NumberOrPercentageOrUniversalMeasure.t,
+  size: int,
   @as("type") _type: [#auto | #nil | #pct | #dxa],
 }
 
@@ -356,7 +367,7 @@ module Table = {
   }
 
   type options = {
-    alignment?: AlignmentType.t,
+    alignment?: alignment_type,
     borders?: table_borders_options,
     columnWidths?: array<float>,
     float?: table_float_options,

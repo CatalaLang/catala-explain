@@ -77,18 +77,18 @@ let rec loggedValueKindToText = (value: LoggedValue.t): string => {
   }
 }
 
-let getLinkToSourcePos = ({filename, start_line, end_line}: sourcePosition): paragraph_child => {
+let getLawHeadingBreadcrumbsLink = (
+  {filename, start_line, end_line, law_headings}: sourcePosition,
+): paragraph_child => {
   ExternalHyperlink.create({
     children: [
-      TextRun.create("["),
       TextRun.create'({
-        // text: "voir le code source ➥",
-        text: "➥",
+        text: law_headings->Array.joinWith(" > "),
+        size: "6pt",
         underline: {
           type_: #single,
         },
       }),
-      TextRun.create("]"),
     ],
     link: `https://github.com/CatalaLang/catala/blob/master/${filename}#L${start_line->Int.toString}-L${end_line->Int.toString}`,
   })
