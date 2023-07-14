@@ -243,6 +243,81 @@ module Docx = {
     }
   }
 
+  let varDefToTableRow = ({name, value, pos}: var_def): array<TableRow.t> => {
+    let varDef = TableRow.create({
+      children: [
+        TableCell.create({
+          children: [
+            Paragraph.create'({
+              children: [
+                TextRun.create'({text: name->Utils.lastExn, style: "NormalTableCellText"}),
+              ],
+              spacing: {before: 40, after: 40},
+            }),
+          ],
+          width: {size: 80, _type: #pct},
+          borders: {
+            bottom: {
+              style: #none,
+            },
+          },
+        }),
+        if value->isLitLoggedValue {
+          TableCell.create({
+            children: [
+              Paragraph.create'({
+                alignment: #right,
+                children: [value->litLoggedValueToParagraphChild],
+              }),
+            ],
+            width: {size: 20, _type: #pct},
+            borders: {
+              bottom: {
+                style: #none,
+              },
+            },
+          })
+        } else {
+          TableCell.create({
+            children: [
+              Paragraph.create'({
+                children: [TextRun.create("TODO")],
+              }),
+            ],
+          })
+        },
+      ],
+    })
+
+    switch pos {
+    | Some(pos) => {
+        let headingBreadcrumps = TableRow.create({
+          children: [
+            TableCell.create({
+              children: [
+                Paragraph.create'({
+                  children: [Utils.getLawHeadingBreadcrumbsLink(pos)],
+                  spacing: {after: 40, before: 40},
+                }),
+              ],
+              width: {size: 100, _type: #pct},
+              borders: {
+                top: {
+                  style: #dotted,
+                  size: 0.25,
+                  color: "#000000",
+                },
+              },
+            }),
+          ],
+          height: {value: NumberOrPositiveUniversalMeasure.number(0.0), rule: #atLeast},
+        })
+        [varDef, headingBreadcrumps]
+      }
+    | None => [varDef]
+    }
+  }
+
   let varDefToFileChilds = ({name, value, pos}: var_def): array<file_child> => {
     if value->isLitLoggedValue {
       [
@@ -256,7 +331,7 @@ module Docx = {
             TextRun.create(` vaut `),
             value->litLoggedValueToParagraphChild,
             TextRun.create(`. `),
-            pos->Option.mapWithDefault(TextRun.create(""), Utils.getLinkToSourcePos),
+            pos->Option.mapWithDefault(TextRun.create(""), Utils.getLawHeadingBreadcrumbsLink),
           ],
         }),
       ]
@@ -276,7 +351,7 @@ module Docx = {
             }),
             TextRun.create(`) `),
             TextRun.create(` ${value->Utils.isArrayLoggedValue ? "est composé de" : "vaut"} : `),
-            pos->Option.mapWithDefault(TextRun.create(""), Utils.getLinkToSourcePos),
+            pos->Option.mapWithDefault(TextRun.create(""), Utils.getLawHeadingBreadcrumbsLink),
           ],
         }),
       ]->Array.concat(value->loggedValueToFileChilds)
@@ -352,6 +427,29 @@ module Docx = {
     ->Iterator.toArray
     ->Array.sort(((id, _), (id', _)) => SectionId.compare(id, id'))
     ->Array.flatMap(((id, {title, inputs, outputs, explanations, parent})) => {
+      let inputTable = Table.create({
+        width: {size: 100, _type: #pct},
+        layout: #autofit,
+        alignment: #center,
+        rows: [
+          TableRow.create({
+            tableHeader: true,
+            children: [
+              TableCell.create({
+                children: [
+                  Paragraph.create("Tableau récapitulatif des entrées de l'étape de calcul"),
+                ],
+              }),
+            ],
+          }),
+        ]->Array.concat(
+          inputs
+          ->Array.filter(({value}) => Utils.loggedValueIsEmbeddable(value))
+          ->Array.sort((a, b) => Utils.loggedValueCompare(a.value, b.value))
+          ->Array.flatMap(varDefToTableRow(_)),
+        ),
+      })
+
       let inputParagraphs = [
         Paragraph.create'({
           heading: #Heading3,
@@ -415,7 +513,7 @@ module Docx = {
             },
           }),
         ]
-        ->Array.concat(inputParagraphs)
+        ->Array.concat([inputTable])
         ->Array.concat(outputParagraphs)
         ->Array.concat(explanationsParagraphs)
       }
