@@ -28,17 +28,17 @@ let getExplanationsDocSection = (
 ): Document.section => {
   {
     children: [
-      Paragraph.create'({text: "Explications", heading: #Heading1}),
-      Paragraph.create'({
-        children: [
-          TextRun.create("Vous trouverez ci-dessous les explications détaillées du calcul."),
-          TextRun.create("Pour chaque "),
-          TextRun.create'({text: "étape", italics: true}),
-          TextRun.create(
-            " vous trouverez une explication de la règle de calcul utilisée, ainsi que les valeurs des variables utilisées et de potentielles sous-étapes nécessaires.",
-          ),
-        ],
-      }),
+      // Paragraph.create'({text: "Explications", heading: #Heading1}),
+      // Paragraph.create'({
+      //   children: [
+      //     TextRun.create("Vous trouverez ci-dessous les explications détaillées du calcul."),
+      //     TextRun.create("Pour chaque "),
+      //     TextRun.create'({text: "étape", italics: true}),
+      //     TextRun.create(
+      //       " vous trouverez une explication de la règle de calcul utilisée, ainsi que les valeurs des variables utilisées et de potentielles sous-étapes nécessaires.",
+      //     ),
+      //   ],
+      // }),
     ]->Array.concat(explanationSectionMap->Explanations.Docx.explanationsToFileChilds),
   }
 }
@@ -99,27 +99,27 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
           }),
         },
         children: [
-          Paragraph.create'({
-            text: opts.title->Option.getWithDefault("Explication individuelle du calcul"),
-            heading: #Title,
-            alignment: #center,
-          }),
-          Paragraph.create'({
-            text: opts.description->Option.getUnsafe,
-            heading: #Heading2,
-            alignment: #center,
-          }),
-          Paragraph.create'({
-            text: `Généré le ${Date.now()
-              ->Date.fromTime
-              ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long})}`,
-            heading: #Heading4,
-            alignment: #center,
-          }),
+          // Paragraph.create'({
+          //   text: opts.title->Option.getWithDefault("Explication individuelle du calcul"),
+          //   heading: #Title,
+          //   alignment: #center,
+          // }),
+          // Paragraph.create'({
+          //   text: opts.description->Option.getUnsafe,
+          //   heading: #Heading2,
+          //   alignment: #center,
+          // }),
+          // Paragraph.create'({
+          //   text: `Généré le ${Date.now()
+          //     ->Date.fromTime
+          //     ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long})}`,
+          //   heading: #Heading4,
+          //   alignment: #center,
+          // }),
         ],
       },
-      getUserInputDocSection(~userInputs, ~schema=opts.schema, ~uiSchema=opts.uiSchema),
-      explanationSectionMap->getResultDocSection,
+      // getUserInputDocSection(~userInputs, ~schema=opts.schema, ~uiSchema=opts.uiSchema),
+      // explanationSectionMap->getResultDocSection,
       explanationSectionMap->getExplanationsDocSection,
     ],
     styles: {

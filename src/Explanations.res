@@ -243,79 +243,181 @@ module Docx = {
     }
   }
 
-  let varDefToTableRow = ({name, value, pos}: var_def): array<TableRow.t> => {
-    let varDef = TableRow.create({
+  let getLawHeadingInTableRow = (pos: option<CatalaRuntime.sourcePosition>): option<TableRow.t> => {
+    switch pos {
+    | Some(pos) =>
+      TableRow.create({
+        children: [
+          TableCell.create({
+            children: [
+              Paragraph.create'({
+                children: [Utils.getLawHeadingBreadcrumbsLink(pos)],
+                spacing: {after: 40, before: 40},
+              }),
+            ],
+            width: {size: 100.0, _type: #pct},
+            borders: {
+              top: {
+                style: #dotted,
+                size: 0.25,
+                color: "#000000",
+              },
+            },
+          }),
+        ],
+        height: {value: NumberOrPositiveUniversalMeasure.number(0.0), rule: #atLeast},
+      })->Some
+    | None => None
+    }
+  }
+
+  let litLogValueToCell = (val: LoggedValue.t): TableCell.t => {
+    TableCell.create({
       children: [
+        Paragraph.create'({
+          alignment: #right,
+          children: [val->litLoggedValueToParagraphChild],
+        }),
+      ],
+      width: {size: 20.0, _type: #pct},
+      borders: {
+        bottom: {
+          style: #none,
+        },
+      },
+    })
+  }
+
+  let getEmptyCellArray = (length: int): array<TableCell.t> => {
+    Array.make(
+      ~length,
+      TableCell.create({
+        children: [],
+        width: {size: 10.0, _type: #dxa},
+        borders: {
+          bottom: {
+            style: #none,
+          },
+        },
+      }),
+    )
+  }
+
+  let litVarDefToTableRow = (~depth=1, ~maxDepth, {name, value, pos}: var_def): array<
+    TableRow.t,
+  > => {
+    let columnSpan = maxDepth - depth + 1
+    Console.log2("depth", depth)
+    Console.log2("maxDepth", maxDepth)
+    Console.log2("name", name)
+    let varNameCell = TableCell.create({
+      children: [
+        Paragraph.create'({
+          children: [TextRun.create'({text: name->Utils.lastExn, style: "NormalTableCellText"})],
+          spacing: {before: 40, after: 40},
+        }),
+      ],
+      columnSpan,
+      width: {size: 80.0, _type: #pct},
+      borders: {
+        bottom: {
+          style: #none,
+        },
+      },
+    })
+
+    let varDef = TableRow.create({
+      children: (depth - 1)
+      ->getEmptyCellArray
+      ->Array.concat([varNameCell, value->litLogValueToCell]),
+    })
+
+    switch getLawHeadingInTableRow(pos) {
+    | Some(breadcrumpsRow) => [varDef, breadcrumpsRow]
+    // NOTE(@EmileRolley): should it be possible?
+    | None => [varDef]
+    }
+  }
+
+  let varDefToTableRow = (~depth=1, ~maxDepth, {name, value, pos}: var_def): array<TableRow.t> => {
+    let varNameRow = TableRow.create({
+      children: getEmptyCellArray(depth - 1)->Array.concat([
         TableCell.create({
           children: [
             Paragraph.create'({
-              children: [
-                TextRun.create'({text: name->Utils.lastExn, style: "NormalTableCellText"}),
-              ],
+              children: [TextRun.create'({text: name->Utils.lastExn, style: "BoldTableCellText"})],
               spacing: {before: 40, after: 40},
             }),
           ],
-          width: {size: 80, _type: #pct},
+          width: {size: 80.0, _type: #pct},
           borders: {
             bottom: {
               style: #none,
             },
           },
         }),
-        if value->isLitLoggedValue {
-          TableCell.create({
-            children: [
-              Paragraph.create'({
-                alignment: #right,
-                children: [value->litLoggedValueToParagraphChild],
-              }),
-            ],
-            width: {size: 20, _type: #pct},
-            borders: {
-              bottom: {
-                style: #none,
-              },
-            },
-          })
-        } else {
-          TableCell.create({
-            children: [
-              Paragraph.create'({
-                children: [TextRun.create("TODO")],
-              }),
-            ],
-          })
-        },
-      ],
+      ]),
     })
 
-    switch pos {
-    | Some(pos) => {
-        let headingBreadcrumps = TableRow.create({
-          children: [
-            TableCell.create({
+    let litValueRows = switch value {
+    | Enum(_, (_, val)) => [
+        TableRow.create({
+          children: getEmptyCellArray(depth)->Array.concat(
+            if val->isLitLoggedValue {
+              [val->litLogValueToCell]
+            } else {
+              [
+                TableCell.create({
+                  children: [Paragraph.create("TODO")],
+                  width: {size: 20.0, _type: #pct},
+                }),
+              ]
+            },
+          ),
+        }),
+      ]
+    | Struct(_, l) =>
+      l
+      ->List.toArray
+      ->Array.filter(((_, value)) => Utils.loggedValueIsEmbeddable(value))
+      ->Array.sort(((_, v1), (_, v2)) => Utils.loggedValueCompare(v1, v2))
+      ->Array.flatMap(((field, value)) => {
+        switch value {
+        | v if v->isLitLoggedValue =>
+          litVarDefToTableRow(
+            ~depth=depth + 1,
+            ~maxDepth,
+            {
+              name: list{field},
+              value: v,
+              pos: None,
+              // TODO: factorize this
+              fun_calls: None,
+              io: {io_input: NoInput, io_output: false},
+            },
+          )
+        | _ => [
+            TableRow.create({
               children: [
-                Paragraph.create'({
-                  children: [Utils.getLawHeadingBreadcrumbsLink(pos)],
-                  spacing: {after: 40, before: 40},
+                TableCell.create({
+                  children: [Paragraph.create("TODO")],
+                  width: {size: 20.0, _type: #pct},
                 }),
               ],
-              width: {size: 100, _type: #pct},
-              borders: {
-                top: {
-                  style: #dotted,
-                  size: 0.25,
-                  color: "#000000",
-                },
-              },
             }),
-          ],
-          height: {value: NumberOrPositiveUniversalMeasure.number(0.0), rule: #atLeast},
-        })
-        [varDef, headingBreadcrumps]
-      }
-    | None => [varDef]
+          ]
+        }
+      })
+
+    | Array(val) => []
+    | _ => Js.Exn.raiseError(`Non-literal value is expected.`)
     }
+
+    switch getLawHeadingInTableRow(pos) {
+    | Some(breadcrumpsRow) => [varNameRow, breadcrumpsRow]
+    // NOTE(@EmileRolley): should it be possible?
+    | None => [varNameRow]
+    }->Array.concat(litValueRows)
   }
 
   let varDefToFileChilds = ({name, value, pos}: var_def): array<file_child> => {
@@ -421,101 +523,155 @@ module Docx = {
     ]
   }
 
+  let getMaxInputDepth = (inputs: array<var_def>): int => {
+    let rec loggedValueGetMaxDepth = (~depth=0, value: LoggedValue.t): int => {
+      switch value {
+      | Struct(_, l) =>
+        l
+        ->List.toArray
+        ->Array.map(((name, value)) => {
+          let res = value->loggedValueGetMaxDepth(~depth=depth + 1)
+          Console.log2(name, res)
+          res
+        })
+        ->Array.reduce(0, (a, b) => Math.Int.max(a, b))
+      | Enum(_, (_, _l)) => depth //TODO
+      // l->loggedValueGetMaxDepth(~depth=depth + 1)
+      | Array(_) => // TODO
+        depth
+      // l
+      // ->Array.map(value => value->loggedValueGetMaxDepth(~depth=depth + 1))
+      // ->Array.reduce(0, (a, b) => Math.Int.max(a, b))
+      | _ => depth
+      }
+    }
+
+    inputs
+    ->Array.map(({name, value}) => {
+      if !(value->isLitLoggedValue) {
+        let res = value->loggedValueGetMaxDepth
+
+        // Console.log2(name->List.toArray, res)
+        res
+      } else {
+        0
+      }
+    })
+    ->Array.reduce(0, (a, b) => {
+      let max = Math.Int.max(a, b)
+      Console.log3(a, b, max)
+      max
+    })
+  }
+
   let explanationsToFileChilds = (explanationSectionMap: sectionMap): array<file_child> => {
     explanationSectionMap
     ->Map.entries
     ->Iterator.toArray
     ->Array.sort(((id, _), (id', _)) => SectionId.compare(id, id'))
     ->Array.flatMap(((id, {title, inputs, outputs, explanations, parent})) => {
-      let inputTable = Table.create({
-        width: {size: 100, _type: #pct},
-        layout: #autofit,
-        alignment: #center,
-        rows: [
-          TableRow.create({
-            tableHeader: true,
+      if id !== 1 {
+        []
+      } else {
+        let maxInputsDepth = inputs->getMaxInputDepth
+        let inputTable = Table.create({
+          width: {size: 100.0, _type: #pct},
+          layout: #fixed,
+          alignment: #center,
+          rows: [
+            TableRow.create({
+              tableHeader: true,
+              children: [
+                TableCell.create({
+                  children: [
+                    Paragraph.create("Tableau récapitulatif des entrées de l'étape de calcul"),
+                  ],
+                }),
+              ],
+            }),
+          ]->Array.concat(
+            inputs
+            ->Array.filter(({value}) => Utils.loggedValueIsEmbeddable(value))
+            ->Array.sort((a, b) => Utils.loggedValueCompare(a.value, b.value))
+            ->Array.flatMap(varDef => {
+              if varDef.value->isLitLoggedValue {
+                varDef->litVarDefToTableRow(~maxDepth=maxInputsDepth)
+              } else {
+                varDef->varDefToTableRow(~maxDepth=maxInputsDepth)
+              }
+            }),
+          ),
+        })
+
+        let inputParagraphs = [
+          Paragraph.create'({
+            heading: #Heading3,
             children: [
-              TableCell.create({
-                children: [
-                  Paragraph.create("Tableau récapitulatif des entrées de l'étape de calcul"),
-                ],
-              }),
-            ],
+              TextRun.create("Entrées utilisées pour l'étape de calcul "),
+            ]->Array.concat(linkToSection(id)),
           }),
         ]->Array.concat(
           inputs
           ->Array.filter(({value}) => Utils.loggedValueIsEmbeddable(value))
           ->Array.sort((a, b) => Utils.loggedValueCompare(a.value, b.value))
-          ->Array.flatMap(varDefToTableRow(_)),
-        ),
-      })
-
-      let inputParagraphs = [
-        Paragraph.create'({
-          heading: #Heading3,
-          children: [TextRun.create("Entrées utilisées pour l'étape de calcul ")]->Array.concat(
-            linkToSection(id),
-          ),
-        }),
-      ]->Array.concat(
-        inputs
-        ->Array.filter(({value}) => Utils.loggedValueIsEmbeddable(value))
-        ->Array.sort((a, b) => Utils.loggedValueCompare(a.value, b.value))
-        ->Array.flatMap(varDefToFileChilds(_)),
-      )
-      let outputParagraphs = [
-        Paragraph.create'({
-          heading: #Heading3,
-          children: [
-            TextRun.create(
-              outputs->Array.length > 1
-                ? "Valeurs calculées dans l'étape de calcul "
-                : "Valeur calculée dans l'étape de calcul ",
+          ->Array.flatMap(varDefToFileChilds(_)),
+        )
+        let outputParagraphs = [
+          Paragraph.create'({
+            heading: #Heading3,
+            children: [
+              TextRun.create(
+                outputs->Array.length > 1
+                  ? "Valeurs calculées dans l'étape de calcul "
+                  : "Valeur calculée dans l'étape de calcul ",
+              ),
+            ]->Array.concat(linkToSection(id)),
+          }),
+        ]->Array.concat(outputs->Array.flatMap(varDefToFileChilds))
+        let explanationsParagraphs = [
+          Paragraph.create'({
+            heading: #Heading3,
+            children: [TextRun.create("Explication pour l'étape de calcul ")]->Array.concat(
+              linkToSection(id),
             ),
-          ]->Array.concat(linkToSection(id)),
-        }),
-      ]->Array.concat(outputs->Array.flatMap(varDefToFileChilds))
-      let explanationsParagraphs = [
-        Paragraph.create'({
-          heading: #Heading3,
-          children: [TextRun.create("Explication pour l'étape de calcul ")]->Array.concat(
-            linkToSection(id),
+          }),
+        ]->Array.concat(
+          explanations->Array.flatMap(expl =>
+            switch expl {
+            | Ref(id) => [
+                Paragraph.create'({
+                  children: [TextRun.create("Calcul de l'étape ")]->Array.concat(
+                    linkToSection(id),
+                  ),
+                }),
+              ]
+            | Def(varDef) => varDefToFileChilds(varDef)
+            }
           ),
-        }),
-      ]->Array.concat(
-        explanations->Array.flatMap(expl =>
-          switch expl {
-          | Ref(id) => [
-              Paragraph.create'({
-                children: [TextRun.create("Calcul de l'étape ")]->Array.concat(linkToSection(id)),
-              }),
-            ]
-          | Def(varDef) => varDefToFileChilds(varDef)
-          }
-        ),
-      )
-      if id == SectionId.root {
-        []
-      } else {
-        [
-          Paragraph.create'({
-            heading: #Heading2,
-            children: [bookmarkSection(id, title)],
-            pageBreakBefore: true,
-          }),
-          Paragraph.create'({
-            children: if parent != SectionId.root {
-              [TextRun.create("Cette étape de calcul intervient dans l'étape ")]->Array.concat(
-                linkToSection(parent),
-              )
-            } else {
-              []
-            },
-          }),
-        ]
-        ->Array.concat([inputTable])
-        ->Array.concat(outputParagraphs)
-        ->Array.concat(explanationsParagraphs)
+        )
+        if id == SectionId.root {
+          []
+        } else {
+          [
+            Paragraph.create'({
+              heading: #Heading2,
+              children: [bookmarkSection(id, title)],
+              pageBreakBefore: true,
+            }),
+            Paragraph.create'({
+              children: if parent != SectionId.root {
+                [TextRun.create("Cette étape de calcul intervient dans l'étape ")]->Array.concat(
+                  linkToSection(parent),
+                )
+              } else {
+                []
+              },
+            }),
+          ]
+          ->Array.concat([inputTable])
+          ->Array.concat(outputParagraphs)
+          ->Array.concat(explanationsParagraphs)
+        }
       }
     })
   }

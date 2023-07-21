@@ -293,7 +293,7 @@ module Paragraph = {
 
 /** @see https://docx.js.org/api/types/ITableWidthProperties.html */
 type table_width = {
-  size: int,
+  size: float,
   @as("type") _type: [#auto | #nil | #pct | #dxa],
 }
 
@@ -314,7 +314,7 @@ module TableCell = {
     // NOTE(@EmileRolley): children should only be Paragraph or Table
     children: array<file_child>,
     borders?: table_cell_borders_options,
-    columnSpan?: float,
+    columnSpan?: int,
     rowSpan?: float,
     textDirection?: text_direction,
     verticalAlign?: [#bottom | #center | #top],
