@@ -279,7 +279,6 @@ module Docx = {
           children: [val->litLoggedValueToParagraphChild],
         }),
       ],
-      width: {size: 20.0, _type: #pct},
       borders: {
         bottom: {
           style: #none,
@@ -293,7 +292,7 @@ module Docx = {
       ~length,
       TableCell.create({
         children: [],
-        width: {size: 10.0, _type: #dxa},
+        width: {size: 4.0, _type: #pct},
         borders: {
           bottom: {
             style: #none,
@@ -303,13 +302,9 @@ module Docx = {
     )
   }
 
-  let litVarDefToTableRow = (~depth=1, ~maxDepth, {name, value, pos}: var_def): array<
+  let litVarDefToTableRow = (~depth=0, ~maxDepth, {name, value, pos}: var_def): array<
     TableRow.t,
   > => {
-    let columnSpan = maxDepth - depth + 1
-    Console.log2("depth", depth)
-    Console.log2("maxDepth", maxDepth)
-    Console.log2("name", name)
     let varNameCell = TableCell.create({
       children: [
         Paragraph.create'({
@@ -317,8 +312,7 @@ module Docx = {
           spacing: {before: 40, after: 40},
         }),
       ],
-      columnSpan,
-      width: {size: 80.0, _type: #pct},
+      columnSpan: maxDepth - depth,
       borders: {
         bottom: {
           style: #none,
@@ -327,9 +321,7 @@ module Docx = {
     })
 
     let varDef = TableRow.create({
-      children: (depth - 1)
-      ->getEmptyCellArray
-      ->Array.concat([varNameCell, value->litLogValueToCell]),
+      children: depth->getEmptyCellArray->Array.concat([varNameCell, value->litLogValueToCell]),
     })
 
     switch getLawHeadingInTableRow(pos) {
@@ -339,9 +331,13 @@ module Docx = {
     }
   }
 
-  let varDefToTableRow = (~depth=1, ~maxDepth, {name, value, pos}: var_def): array<TableRow.t> => {
+  let rec varDefToTableRow = (~depth=0, ~maxDepth, {name, value, pos}: var_def): array<
+    TableRow.t,
+  > => {
     let varNameRow = TableRow.create({
-      children: getEmptyCellArray(depth - 1)->Array.concat([
+      children: depth
+      ->getEmptyCellArray
+      ->Array.concat([
         TableCell.create({
           children: [
             Paragraph.create'({
@@ -349,7 +345,7 @@ module Docx = {
               spacing: {before: 40, after: 40},
             }),
           ],
-          width: {size: 80.0, _type: #pct},
+          columnSpan: maxDepth - depth + 1,
           borders: {
             bottom: {
               style: #none,
@@ -382,33 +378,13 @@ module Docx = {
       ->Array.filter(((_, value)) => Utils.loggedValueIsEmbeddable(value))
       ->Array.sort(((_, v1), (_, v2)) => Utils.loggedValueCompare(v1, v2))
       ->Array.flatMap(((field, value)) => {
-        switch value {
-        | v if v->isLitLoggedValue =>
-          litVarDefToTableRow(
-            ~depth=depth + 1,
-            ~maxDepth,
-            {
-              name: list{field},
-              value: v,
-              pos: None,
-              // TODO: factorize this
-              fun_calls: None,
-              io: {io_input: NoInput, io_output: false},
-            },
-          )
-        | _ => [
-            TableRow.create({
-              children: [
-                TableCell.create({
-                  children: [Paragraph.create("TODO")],
-                  width: {size: 20.0, _type: #pct},
-                }),
-              ],
-            }),
-          ]
+        let varDefWithoutInfos = Utils.getVarDefWithoutInfos(field, value)
+        if value->isLitLoggedValue {
+          litVarDefToTableRow(~maxDepth, ~depth=depth + 1, varDefWithoutInfos)
+        } else {
+          varDefToTableRow(~maxDepth, ~depth=depth + 1, varDefWithoutInfos)
         }
       })
-
     | Array(val) => []
     | _ => Js.Exn.raiseError(`Non-literal value is expected.`)
     }
@@ -524,7 +500,7 @@ module Docx = {
   }
 
   let getMaxInputDepth = (inputs: array<var_def>): int => {
-    let rec loggedValueGetMaxDepth = (~depth=0, value: LoggedValue.t): int => {
+    let rec loggedValueGetMaxDepth = (~depth=1, value: LoggedValue.t): int => {
       switch value {
       | Struct(_, l) =>
         l
@@ -534,9 +510,8 @@ module Docx = {
           Console.log2(name, res)
           res
         })
-        ->Array.reduce(0, (a, b) => Math.Int.max(a, b))
-      | Enum(_, (_, _l)) => depth //TODO
-      // l->loggedValueGetMaxDepth(~depth=depth + 1)
+        ->Array.reduce(1, (a, b) => Math.Int.max(a, b))
+      | Enum(_, (_, _l)) => depth
       | Array(_) => // TODO
         depth
       // l
@@ -547,17 +522,14 @@ module Docx = {
     }
 
     inputs
-    ->Array.map(({name, value}) => {
+    ->Array.map(({value}) => {
       if !(value->isLitLoggedValue) {
-        let res = value->loggedValueGetMaxDepth
-
-        // Console.log2(name->List.toArray, res)
-        res
+        value->loggedValueGetMaxDepth
       } else {
-        0
+        1
       }
     })
-    ->Array.reduce(0, (a, b) => {
+    ->Array.reduce(1, (a, b) => {
       let max = Math.Int.max(a, b)
       Console.log3(a, b, max)
       max
@@ -575,6 +547,8 @@ module Docx = {
       } else {
         let maxInputsDepth = inputs->getMaxInputDepth
         let inputTable = Table.create({
+          // TODO: should be dynamicaly computed
+          columnWidths: [4.0, 4.0, 60.0, 30.0],
           width: {size: 100.0, _type: #pct},
           layout: #fixed,
           alignment: #center,
@@ -603,19 +577,6 @@ module Docx = {
           ),
         })
 
-        let inputParagraphs = [
-          Paragraph.create'({
-            heading: #Heading3,
-            children: [
-              TextRun.create("Entrées utilisées pour l'étape de calcul "),
-            ]->Array.concat(linkToSection(id)),
-          }),
-        ]->Array.concat(
-          inputs
-          ->Array.filter(({value}) => Utils.loggedValueIsEmbeddable(value))
-          ->Array.sort((a, b) => Utils.loggedValueCompare(a.value, b.value))
-          ->Array.flatMap(varDefToFileChilds(_)),
-        )
         let outputParagraphs = [
           Paragraph.create'({
             heading: #Heading3,
