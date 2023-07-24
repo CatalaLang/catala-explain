@@ -326,74 +326,72 @@ module Docx = {
 
     switch getLawHeadingInTableRow(pos) {
     | Some(breadcrumpsRow) => [varDef, breadcrumpsRow]
-    // NOTE(@EmileRolley): should it be possible?
     | None => [varDef]
     }
   }
 
+  // TODO: could be factorized
   let rec varDefToTableRow = (~depth=0, ~maxDepth, {name, value, pos}: var_def): array<
     TableRow.t,
   > => {
-    let varNameRow = TableRow.create({
-      children: depth
-      ->getEmptyCellArray
-      ->Array.concat([
-        TableCell.create({
-          children: [
-            Paragraph.create'({
-              children: [TextRun.create'({text: name->Utils.lastExn, style: "BoldTableCellText"})],
-              spacing: {before: 40, after: 40},
-            }),
-          ],
-          columnSpan: maxDepth - depth + 1,
-          borders: {
-            bottom: {
-              style: #none,
-            },
-          },
-        }),
-      ]),
-    })
-
-    let litValueRows = switch value {
-    | Enum(_, (_, val)) => [
-        TableRow.create({
-          children: getEmptyCellArray(depth)->Array.concat(
-            if val->isLitLoggedValue {
-              [val->litLogValueToCell]
-            } else {
-              [
-                TableCell.create({
-                  children: [Paragraph.create("TODO")],
-                  width: {size: 20.0, _type: #pct},
-                }),
-              ]
-            },
-          ),
-        }),
-      ]
-    | Struct(_, l) =>
-      l
-      ->List.toArray
-      ->Array.filter(((_, value)) => Utils.loggedValueIsEmbeddable(value))
-      ->Array.sort(((_, v1), (_, v2)) => Utils.loggedValueCompare(v1, v2))
-      ->Array.flatMap(((field, value)) => {
-        let varDefWithoutInfos = Utils.getVarDefWithoutInfos(field, value)
-        if value->isLitLoggedValue {
-          litVarDefToTableRow(~maxDepth, ~depth=depth + 1, varDefWithoutInfos)
+    switch value {
+    | Enum(_, (_, val)) => {
+        // Unwrap the enum
+        let varDefWithoutInfos = Utils.getVarDefWithoutInfos(name, val)
+        if val->isLitLoggedValue {
+          litVarDefToTableRow(~maxDepth, ~depth, varDefWithoutInfos)
         } else {
-          varDefToTableRow(~maxDepth, ~depth=depth + 1, varDefWithoutInfos)
+          varDefToTableRow(~maxDepth, ~depth, varDefWithoutInfos)
         }
-      })
-    | Array(val) => []
+      }
+    | Struct(_, l) => {
+        let varNameRow = TableRow.create({
+          children: depth
+          ->getEmptyCellArray
+          ->Array.concat([
+            TableCell.create({
+              children: [
+                Paragraph.create'({
+                  children: [
+                    TextRun.create'({text: name->Utils.lastExn, style: "BoldTableCellText"}),
+                  ],
+                  spacing: {before: 40, after: 40},
+                }),
+              ],
+              columnSpan: maxDepth - depth + 1,
+              borders: {
+                bottom: {
+                  style: #none,
+                },
+              },
+            }),
+          ]),
+        })
+
+        let valueRows =
+          l
+          ->List.toArray
+          ->Array.filter(((_, value)) => Utils.loggedValueIsEmbeddable(value))
+          ->Array.sort(((_, v1), (_, v2)) => Utils.loggedValueCompare(v1, v2))
+          ->Array.flatMap(((field, value)) => {
+            let varDefWithoutInfos = Utils.getVarDefWithoutInfos(list{field}, value)
+            if value->isLitLoggedValue {
+              litVarDefToTableRow(~maxDepth, ~depth=depth + 1, varDefWithoutInfos)
+            } else {
+              varDefToTableRow(~maxDepth, ~depth=depth + 1, varDefWithoutInfos)
+            }
+          })
+
+        switch getLawHeadingInTableRow(pos) {
+        | Some(breadcrumpsRow) => [varNameRow, breadcrumpsRow]
+        // NOTE(@EmileRolley): should it be possible?
+        | None => [varNameRow]
+        }->Array.concat(valueRows)
+      }
+    | Array(_) => // TODO
+      []
     | _ => Js.Exn.raiseError(`Non-literal value is expected.`)
     }
-
-    switch getLawHeadingInTableRow(pos) {
-    | Some(breadcrumpsRow) => [varNameRow, breadcrumpsRow]
-    // NOTE(@EmileRolley): should it be possible?
-    | None => [varNameRow]
-    }->Array.concat(litValueRows)
   }
 
   let varDefToFileChilds = ({name, value, pos}: var_def): array<file_child> => {
@@ -505,13 +503,13 @@ module Docx = {
       | Struct(_, l) =>
         l
         ->List.toArray
-        ->Array.map(((name, value)) => {
-          let res = value->loggedValueGetMaxDepth(~depth=depth + 1)
-          Console.log2(name, res)
-          res
-        })
+        ->Array.map(((_, value)) => value->loggedValueGetMaxDepth(~depth=depth + 1))
         ->Array.reduce(1, (a, b) => Math.Int.max(a, b))
-      | Enum(_, (_, _l)) => depth
+      | Enum(_, (_, l)) if l->isLitLoggedValue => depth
+      | Enum(_, (_, l)) =>
+        // NOTE(@EmileRolley): we need to unwrap the enum first, because we
+        // don't want to count the enum itself
+        l->loggedValueGetMaxDepth(~depth)
       | Array(_) => // TODO
         depth
       // l
@@ -546,9 +544,13 @@ module Docx = {
         []
       } else {
         let maxInputsDepth = inputs->getMaxInputDepth
+        let columnWidths = Array.make(
+          ~length=maxInputsDepth - 1,
+          4.0,
+        )->Array.concat(// TODO: should be dynamicaly computed
+        [60.0, 30.0])
         let inputTable = Table.create({
-          // TODO: should be dynamicaly computed
-          columnWidths: [4.0, 4.0, 60.0, 30.0],
+          columnWidths,
           width: {size: 100.0, _type: #pct},
           layout: #fixed,
           alignment: #center,
