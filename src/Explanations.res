@@ -277,6 +277,7 @@ module Docx = {
         Paragraph.create'({
           alignment: #right,
           children: [val->litLoggedValueToParagraphChild],
+          spacing: {before: 40, after: 40},
         }),
       ],
       borders: {
@@ -344,7 +345,7 @@ module Docx = {
           varDefToTableRow(~maxDepth, ~depth, varDefWithoutInfos)
         }
       }
-    | Struct(_, l) => {
+    | Struct(structName, fields) => {
         let varNameRow = TableRow.create({
           children: depth
           ->getEmptyCellArray
@@ -354,6 +355,10 @@ module Docx = {
                 Paragraph.create'({
                   children: [
                     TextRun.create'({text: name->Utils.lastExn, style: "BoldTableCellText"}),
+                    TextRun.create'({
+                      text: ` (de type ${structName->List.toArray->Array.joinWith(".")})`,
+                      style: "ItalicTableCellText",
+                    }),
                   ],
                   spacing: {before: 40, after: 40},
                 }),
@@ -369,7 +374,7 @@ module Docx = {
         })
 
         let valueRows =
-          l
+          fields
           ->List.toArray
           ->Array.filter(((_, value)) => Utils.loggedValueIsEmbeddable(value))
           ->Array.sort(((_, v1), (_, v2)) => Utils.loggedValueCompare(v1, v2))
@@ -382,14 +387,35 @@ module Docx = {
             }
           })
 
+        let emptyRow = TableRow.create({
+          children: [
+            TableCell.create({
+              children: [],
+              columnSpan: maxDepth,
+            }),
+          ],
+        })
+
         switch getLawHeadingInTableRow(pos) {
-        | Some(breadcrumpsRow) => [varNameRow, breadcrumpsRow]
-        // NOTE(@EmileRolley): should it be possible?
-        | None => [varNameRow]
+        | Some(breadcrumpsRow) => [emptyRow, varNameRow, breadcrumpsRow]
+        | None => [emptyRow, varNameRow]
         }->Array.concat(valueRows)
       }
-    | Array(_) => // TODO
-      []
+    | Array(l) => {
+        let elemNb = ref(0)
+        l->Array.flatMap(value => {
+          elemNb := elemNb.contents + 1
+          let varDefWithoutInfos = Utils.getVarDefWithoutInfos(
+            name->List.map(n => n ++ " (élément " ++ elemNb.contents->Int.toString ++ ")"),
+            value,
+          )
+          if value->isLitLoggedValue {
+            litVarDefToTableRow(~maxDepth, ~depth, varDefWithoutInfos)
+          } else {
+            varDefToTableRow(~maxDepth, ~depth, varDefWithoutInfos)
+          }
+        })
+      }
     | _ => Js.Exn.raiseError(`Non-literal value is expected.`)
     }
   }
@@ -510,11 +536,10 @@ module Docx = {
         // NOTE(@EmileRolley): we need to unwrap the enum first, because we
         // don't want to count the enum itself
         l->loggedValueGetMaxDepth(~depth)
-      | Array(_) => // TODO
-        depth
-      // l
-      // ->Array.map(value => value->loggedValueGetMaxDepth(~depth=depth + 1))
-      // ->Array.reduce(0, (a, b) => Math.Int.max(a, b))
+      | Array(elems) =>
+        elems
+        ->Array.map(value => value->loggedValueGetMaxDepth(~depth))
+        ->Array.reduce(1, (a, b) => Math.Int.max(a, b))
       | _ => depth
       }
     }
@@ -527,11 +552,7 @@ module Docx = {
         1
       }
     })
-    ->Array.reduce(1, (a, b) => {
-      let max = Math.Int.max(a, b)
-      Console.log3(a, b, max)
-      max
-    })
+    ->Array.reduce(1, (a, b) => Math.Int.max(a, b))
   }
 
   let explanationsToFileChilds = (explanationSectionMap: sectionMap): array<file_child> => {
@@ -544,11 +565,7 @@ module Docx = {
         []
       } else {
         let maxInputsDepth = inputs->getMaxInputDepth
-        let columnWidths = Array.make(
-          ~length=maxInputsDepth - 1,
-          4.0,
-        )->Array.concat(// TODO: should be dynamicaly computed
-        [60.0, 30.0])
+        let columnWidths = Array.make(~length=maxInputsDepth - 1, 4.0)->Array.concat([65.0, 25.0])
         let inputTable = Table.create({
           columnWidths,
           width: {size: 100.0, _type: #pct},
@@ -560,7 +577,12 @@ module Docx = {
               children: [
                 TableCell.create({
                   children: [
-                    Paragraph.create("Tableau récapitulatif des entrées de l'étape de calcul"),
+                    Paragraph.create'({
+                      children: [
+                        TextRun.create("Entrées utilisées pour l'étape de calcul"),
+                      ]->Array.concat(id->linkToSection),
+                      // style: "TableHeadingText",
+                    }),
                   ],
                 }),
               ],
