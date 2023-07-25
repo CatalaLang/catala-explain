@@ -4,12 +4,22 @@ module DsfrColors = {
   type t = [
     | #blue_france_925
     | #blue_france_975
+    | #red_marianne_925
+    | #red_marianne_975
+    | #green_emeraude_925
+    | #green_emeraude_975
+    | #grey_main_525
   ]
 
   let toHex = (color: t): string => {
     switch color {
-    | #blue_france_925 => "f5f5fe"
-    | #blue_france_975 => "ffffff"
+    | #blue_france_925 => "e3e3fd"
+    | #blue_france_975 => "f5f5fe"
+    | #red_marianne_925 => "fddede"
+    | #red_marianne_975 => "fef4f4"
+    | #green_emeraude_925 => "fde39c"
+    | #green_emeraude_975 => "fef6e3"
+    | #grey_main_525 => "666666"
     }
   }
 
@@ -17,6 +27,11 @@ module DsfrColors = {
     switch color {
     | #blue_france_925 => #blue_france_975
     | #blue_france_975 => #blue_france_925
+    | #red_marianne_925 => #red_marianne_975
+    | #red_marianne_975 => #red_marianne_925
+    | #green_emeraude_925 => #green_emeraude_975
+    | #green_emeraude_975 => #green_emeraude_925
+    | c => c
     }
   }
 }

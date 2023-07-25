@@ -131,9 +131,58 @@ let getVarDefWithoutInfos = (name: list<string>, value: LoggedValue.t): var_def 
   io: {io_input: NoInput, io_output: false},
 }
 
-let getNormalTableCell = (~columnSpan=1, ~bgColor: DsfrColors.t, children): TableCell.t => {
+let isLitLoggedValue = (val: LoggedValue.t): bool => {
+  switch val {
+  | Enum(_, (_, val)) if val != Unit => false
+  | Struct(_, l) if l->List.length != 0 => false
+  | Array(l) if l->Array.length != 0 => false
+  | Unembeddable => // TODO: handle unembeddable, which are functions and other stuff
+    false
+  | _ => true
+  }
+}
+
+let getMaxDepth = (inputs: array<var_def>): int => {
+  let rec loggedValueGetMaxDepth = (~depth=1, value: LoggedValue.t): int => {
+    switch value {
+    | Struct(_, l) =>
+      l
+      ->List.toArray
+      ->Array.map(((_, value)) => value->loggedValueGetMaxDepth(~depth=depth + 1))
+      ->Array.reduce(1, (a, b) => Math.Int.max(a, b))
+    | Enum(_, (_, l)) if l->isLitLoggedValue => depth
+    | Enum(_, (_, l)) =>
+      // NOTE(@EmileRolley): we need to unwrap the enum first, because we
+      // don't want to count the enum itself
+      l->loggedValueGetMaxDepth(~depth)
+    | Array(elems) =>
+      elems
+      ->Array.map(value => value->loggedValueGetMaxDepth(~depth))
+      ->Array.reduce(1, (a, b) => Math.Int.max(a, b))
+    | _ => depth
+    }
+  }
+
+  inputs
+  ->Array.map(({value}) => {
+    if !(value->isLitLoggedValue) {
+      value->loggedValueGetMaxDepth
+    } else {
+      1
+    }
+  })
+  ->Array.reduce(1, (a, b) => Math.Int.max(a, b))
+}
+
+let getNormalTableCell = (
+  ~columnSpan=1,
+  ~borders: TableCell.table_cell_borders_options={},
+  ~bgColor: DsfrColors.t,
+  children,
+): TableCell.t => {
   TableCell.create({
     shading: {fill: bgColor->toHex},
+    borders,
     columnSpan,
     children,
   })
@@ -147,6 +196,15 @@ let getNormalTableCellParagraph = (~alignment: alignment_type=#left, children) =
   })
 }
 
-let getNormalTextTableCell = (~text, ~bgColor: DsfrColors.t, ~columnSpan): TableCell.t => {
-  [getNormalTableCellParagraph([TextRun.create(text)])]->getNormalTableCell(~bgColor, ~columnSpan)
+let getNormalTextTableCell = (
+  ~borders: TableCell.table_cell_borders_options={},
+  ~bgColor: DsfrColors.t,
+  ~columnSpan,
+  text,
+): TableCell.t => {
+  [getNormalTableCellParagraph([TextRun.create(text)])]->getNormalTableCell(
+    ~bgColor,
+    ~borders,
+    ~columnSpan,
+  )
 }

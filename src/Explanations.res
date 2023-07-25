@@ -113,17 +113,6 @@ module Docx = {
     })
   }
 
-  let isLitLoggedValue = (val: LoggedValue.t): bool => {
-    switch val {
-    | Enum(_, (_, val)) if val != Unit => false
-    | Struct(_, l) if l->List.length != 0 => false
-    | Array(l) if l->Array.length != 0 => false
-    | Unembeddable => // TODO: handle unembeddable, which are functions and other stuff
-      false
-    | _ => true
-    }
-  }
-
   let litLoggedValueToParagraphChild = (val: LoggedValue.t): paragraph_child => {
     switch val {
     | Bool(b) =>
@@ -198,7 +187,7 @@ module Docx = {
               bullet: {level: level},
             }),
           ]->Array.concat(value->loggedValueToFileChilds(~level=level + 1))
-        | v if v->isLitLoggedValue => [
+        | v if v->Utils.isLitLoggedValue => [
             Paragraph.create'({
               children: [
                 TextRun.create("Le champ "),
@@ -263,7 +252,7 @@ module Docx = {
               top: {
                 style: #dotted,
                 size: 0.25,
-                color: "#000000",
+                color: #grey_main_525->toHex,
               },
             },
           }),
@@ -273,9 +262,14 @@ module Docx = {
     }
   }
 
-  let litLogValueToCell = (~bgColor: DsfrColors.t, val: LoggedValue.t): TableCell.t => {
+  let litLogValueToCell = (
+    ~bgColor: DsfrColors.t,
+    ~borders: TableCell.table_cell_borders_options={},
+    val: LoggedValue.t,
+  ): TableCell.t => {
     Utils.getNormalTableCell(
       ~bgColor,
+      ~borders,
       [Utils.getNormalTableCellParagraph(~alignment=#right, [val->litLoggedValueToParagraphChild])],
     )
   }
@@ -286,20 +280,18 @@ module Docx = {
         children: [],
         width: {size: 4.0, _type: #pct},
         shading: {fill: bgColor->toHex},
-        borders: if idx != 0 {
-          {
-            left: {
-              style: #dotted,
-              color: "#000000",
-              size: 5.0,
+        borders: idx != 0
+          ? {
+              left: {
+                style: #dotted,
+                color: "#808080",
+                size: 5.0,
+              },
+              right: {style: #none},
+            }
+          : {
+              right: {style: #none},
             },
-            right: {style: #none},
-          }
-        } else {
-          {
-            right: {style: #none},
-          }
-        },
       })
     })
   }
@@ -310,18 +302,22 @@ module Docx = {
     ~bgColor: DsfrColors.t,
     {name, value, pos}: var_def,
   ): array<TableRow.t> => {
+    let lawHeadingOpt = getLawHeadingInTableRow(~bgColor, pos)
+    let borders: TableCell.table_cell_borders_options =
+      lawHeadingOpt->Option.isSome ? {bottom: {style: #none}} : {}
     let varNameCell = Utils.getNormalTextTableCell(
-      ~text=name->Utils.lastExn,
       ~columnSpan=maxDepth - depth,
+      ~borders,
       ~bgColor,
+      name->Utils.lastExn,
     )
     let varDef = TableRow.create({
       children: depth
       ->getEmptyCellArray(~bgColor)
-      ->Array.concat([varNameCell, value->litLogValueToCell(~bgColor)]),
+      ->Array.concat([varNameCell, value->litLogValueToCell(~bgColor, ~borders)]),
     })
 
-    switch getLawHeadingInTableRow(~bgColor, pos) {
+    switch lawHeadingOpt {
     | Some(breadcrumpsRow) => [varDef, breadcrumpsRow]
     | None => [varDef]
     }
@@ -338,7 +334,7 @@ module Docx = {
     | Enum(_, (_, val)) => {
         // Unwrap the enum
         let varDefWithoutInfos = Utils.getVarDefWithoutInfos(name, val)
-        if val->isLitLoggedValue {
+        if val->Utils.isLitLoggedValue {
           litVarDefToTableRow(~maxDepth, ~depth, ~bgColor=bgColorRef.contents, varDefWithoutInfos)
         } else {
           varDefToTableRow(~maxDepth, ~depth, ~bgColorRef, varDefWithoutInfos)
@@ -353,6 +349,7 @@ module Docx = {
           ->Array.concat([
             Utils.getNormalTableCell(
               ~columnSpan=maxDepth - depth + 1,
+              ~borders={bottom: {style: #none}},
               ~bgColor,
               [
                 Utils.getNormalTableCellParagraph([
@@ -377,7 +374,7 @@ module Docx = {
             let varDefWithoutInfos = Utils.getVarDefWithoutInfos(list{field}, value)
 
             bgColorRef := bgColorRef.contents->DsfrColors.getNextRowColor
-            if value->isLitLoggedValue {
+            if value->Utils.isLitLoggedValue {
               litVarDefToTableRow(
                 ~maxDepth,
                 ~depth=depth + 1,
@@ -413,7 +410,7 @@ module Docx = {
           )
 
           bgColorRef := bgColorRef.contents->DsfrColors.getNextRowColor
-          if value->isLitLoggedValue {
+          if value->Utils.isLitLoggedValue {
             litVarDefToTableRow(~maxDepth, ~depth, ~bgColor=bgColorRef.contents, varDefWithoutInfos)
           } else {
             varDefToTableRow(~maxDepth, ~depth, ~bgColorRef, varDefWithoutInfos)
@@ -425,7 +422,7 @@ module Docx = {
   }
 
   let varDefToFileChilds = ({name, value, pos}: var_def): array<file_child> => {
-    if value->isLitLoggedValue {
+    if value->Utils.isLitLoggedValue {
       [
         Paragraph.create'({
           children: [
@@ -489,7 +486,7 @@ module Docx = {
             style: "VariableName",
           }),
           TextRun.create(` et vaut `),
-          if output.value->isLitLoggedValue {
+          if output.value->Utils.isLitLoggedValue {
             output.value->litLoggedValueToParagraphChild
           } else {
             TextRun.create("TODO (non-literal value)")
@@ -527,36 +524,63 @@ module Docx = {
     ]
   }
 
-  let getMaxInputDepth = (inputs: array<var_def>): int => {
-    let rec loggedValueGetMaxDepth = (~depth=1, value: LoggedValue.t): int => {
-      switch value {
-      | Struct(_, l) =>
-        l
-        ->List.toArray
-        ->Array.map(((_, value)) => value->loggedValueGetMaxDepth(~depth=depth + 1))
-        ->Array.reduce(1, (a, b) => Math.Int.max(a, b))
-      | Enum(_, (_, l)) if l->isLitLoggedValue => depth
-      | Enum(_, (_, l)) =>
-        // NOTE(@EmileRolley): we need to unwrap the enum first, because we
-        // don't want to count the enum itself
-        l->loggedValueGetMaxDepth(~depth)
-      | Array(elems) =>
-        elems
-        ->Array.map(value => value->loggedValueGetMaxDepth(~depth))
-        ->Array.reduce(1, (a, b) => Math.Int.max(a, b))
-      | _ => depth
-      }
-    }
-
-    inputs
-    ->Array.map(({value}) => {
-      if !(value->isLitLoggedValue) {
-        value->loggedValueGetMaxDepth
+  let getTableRows = (~bgColorRef: ref<DsfrColors.t>, ~maxDepth, defs: array<var_def>): array<
+    TableRow.t,
+  > => {
+    defs
+    ->Array.filter(({value}) => Utils.loggedValueIsEmbeddable(value))
+    ->Array.sort((a, b) => Utils.loggedValueCompare(a.value, b.value))
+    ->Array.flatMap(varDef => {
+      bgColorRef := bgColorRef.contents->getNextRowColor
+      if varDef.value->Utils.isLitLoggedValue {
+        varDef->litVarDefToTableRow(~maxDepth, ~bgColor=bgColorRef.contents)
       } else {
-        1
+        varDef->varDefToTableRow(~maxDepth, ~bgColorRef)
       }
     })
-    ->Array.reduce(1, (a, b) => Math.Int.max(a, b))
+  }
+
+  let getTable = (
+    ~id: SectionId.t,
+    ~headingText: string,
+    ~maxDepth: int,
+    ~bgColorRef: ref<DsfrColors.t>,
+    ~contentRows: array<TableRow.t>,
+  ): file_child => {
+    let textHeadingStyle: TextRun.options = {bold: true, size: "10pt"}
+    let innerBorder = {style: #single, color: #grey_main_525->toHex, size: 0.25}
+
+    Table.create({
+      columnWidths: Array.make(~length=maxDepth - 1, 4.0)->Array.concat([65.0, 25.0]),
+      width: {size: 100.0, _type: #pct},
+      alignment: #center,
+      borders: {
+        bottom: {style: #single},
+        insideHorizontal: innerBorder,
+        insideVertical: innerBorder,
+      },
+      rows: [
+        TableRow.create({
+          tableHeader: true,
+          children: [
+            TableCell.create({
+              shading: {fill: bgColorRef.contents->toHex},
+              children: [
+                Paragraph.create'({
+                  spacing: {before: 80, after: 80},
+                  children: [
+                    TextRun.create'({
+                      ...textHeadingStyle,
+                      text: headingText ++ " ",
+                    }),
+                  ]->Array.concat(id->linkToSection(~textRunOptions=textHeadingStyle)),
+                }),
+              ],
+            }),
+          ],
+        }),
+      ]->Array.concat(contentRows),
+    })
   }
 
   let explanationsToFileChilds = (explanationSectionMap: sectionMap): array<file_child> => {
@@ -565,110 +589,101 @@ module Docx = {
     ->Iterator.toArray
     ->Array.sort(((id, _), (id', _)) => SectionId.compare(id, id'))
     ->Array.flatMap(((id, {title, inputs, outputs, explanations, parent})) => {
-      if id !== 1 {
+      let maxInputsDepth = inputs->Utils.getMaxDepth
+      let inputBgColorRef = ref(#blue_france_925)
+      let inputsTable = getTable(
+        ~id,
+        ~headingText="Entrées utilisées pour l'étape de calcul",
+        ~bgColorRef=inputBgColorRef,
+        ~maxDepth=maxInputsDepth,
+        ~contentRows=inputs->getTableRows(~bgColorRef=inputBgColorRef, ~maxDepth=maxInputsDepth),
+      )
+
+      let maxOutputDepth = outputs->Utils.getMaxDepth
+      let outputBgColorRef = ref(#red_marianne_925)
+      let outputsTable = getTable(
+        ~id,
+        ~headingText=outputs->Array.length > 1
+          ? "Valeurs calculées dans l'étape de calcul"
+          : "Valeur calculée dans l'étape de calcul",
+        ~bgColorRef=outputBgColorRef,
+        ~maxDepth=maxOutputDepth,
+        ~contentRows=outputs->getTableRows(~bgColorRef=outputBgColorRef, ~maxDepth=maxOutputDepth),
+      )
+
+      let explanationMaxDepth =
+        explanations
+        ->Array.filterMap((expl: explanation) =>
+          switch expl {
+          | Def(varDef) => Some(varDef)
+          | _ => None
+          }
+        )
+        ->Utils.getMaxDepth
+      let explanationBgColorRef = ref(#green_emeraude_925)
+      let explanationsTable = getTable(
+        ~id,
+        ~headingText="Explication pour l'étape de calcul",
+        ~bgColorRef=explanationBgColorRef,
+        ~maxDepth=explanationMaxDepth,
+        ~contentRows=explanations->Array.flatMap(expl => {
+          explanationBgColorRef := explanationBgColorRef.contents->getNextRowColor
+          switch expl {
+          | Def(varDef) =>
+            if varDef.value->Utils.isLitLoggedValue {
+              varDef->litVarDefToTableRow(
+                ~maxDepth=explanationMaxDepth,
+                ~bgColor=explanationBgColorRef.contents,
+              )
+            } else {
+              varDef->varDefToTableRow(
+                ~maxDepth=explanationMaxDepth,
+                ~bgColorRef=explanationBgColorRef,
+              )
+            }
+          | Ref(id) => [
+              TableRow.create({
+                children: [
+                  Utils.getNormalTableCell(
+                    ~bgColor=explanationBgColorRef.contents,
+                    [
+                      Utils.getNormalTableCellParagraph(
+                        [TextRun.create("Calcul de l'étape ")]->Array.concat(linkToSection(id)),
+                      ),
+                    ],
+                  ),
+                ],
+              }),
+            ]
+          }
+        }),
+      )
+
+      if id == SectionId.root {
         []
       } else {
-        let maxInputsDepth = inputs->getMaxInputDepth
-        let columnWidths = Array.make(~length=maxInputsDepth - 1, 4.0)->Array.concat([65.0, 25.0])
-        let textHeadingStyle: TextRun.options = {bold: true, size: "10pt"}
-        let bgColorRef = ref(#blue_france_925)
-
-        let inputTable = Table.create({
-          columnWidths,
-          width: {size: 100.0, _type: #pct},
-          layout: #fixed,
-          alignment: #center,
-          rows: [
-            TableRow.create({
-              tableHeader: true,
-              children: [
-                TableCell.create({
-                  shading: {fill: bgColorRef.contents->toHex},
-                  children: [
-                    Paragraph.create'({
-                      spacing: {before: 80, after: 80},
-                      children: [
-                        TextRun.create'({
-                          ...textHeadingStyle,
-                          text: "Entrées utilisées pour l'étape de calcul ",
-                        }),
-                      ]->Array.concat(id->linkToSection(~textRunOptions=textHeadingStyle)),
-                    }),
-                  ],
-                }),
-              ],
-            }),
-          ]->Array.concat(
-            inputs
-            ->Array.filter(({value}) => Utils.loggedValueIsEmbeddable(value))
-            ->Array.sort((a, b) => Utils.loggedValueCompare(a.value, b.value))
-            ->Array.flatMap(varDef => {
-              bgColorRef := bgColorRef.contents->getNextRowColor
-              if varDef.value->isLitLoggedValue {
-                varDef->litVarDefToTableRow(~maxDepth=maxInputsDepth, ~bgColor=bgColorRef.contents)
-              } else {
-                varDef->varDefToTableRow(~maxDepth=maxInputsDepth, ~bgColorRef)
-              }
-            }),
-          ),
-        })
-
-        let outputParagraphs = [
+        [
           Paragraph.create'({
-            heading: #Heading3,
-            children: [
-              TextRun.create(
-                outputs->Array.length > 1
-                  ? "Valeurs calculées dans l'étape de calcul "
-                  : "Valeur calculée dans l'étape de calcul ",
-              ),
-            ]->Array.concat(linkToSection(id)),
+            heading: #Heading2,
+            children: [bookmarkSection(id, title)],
+            pageBreakBefore: true,
           }),
-        ]->Array.concat(outputs->Array.flatMap(varDefToFileChilds))
-        let explanationsParagraphs = [
           Paragraph.create'({
-            heading: #Heading3,
-            children: [TextRun.create("Explication pour l'étape de calcul ")]->Array.concat(
-              linkToSection(id),
-            ),
+            children: if parent != SectionId.root {
+              [TextRun.create("Cette étape de calcul intervient dans l'étape ")]->Array.concat(
+                linkToSection(parent),
+              )
+            } else {
+              []
+            },
           }),
-        ]->Array.concat(
-          explanations->Array.flatMap(expl =>
-            switch expl {
-            | Ref(id) => [
-                Paragraph.create'({
-                  children: [TextRun.create("Calcul de l'étape ")]->Array.concat(
-                    linkToSection(id),
-                  ),
-                }),
-              ]
-            | Def(varDef) => varDefToFileChilds(varDef)
-            }
-          ),
-        )
-        if id == SectionId.root {
-          []
-        } else {
-          [
-            Paragraph.create'({
-              heading: #Heading2,
-              children: [bookmarkSection(id, title)],
-              pageBreakBefore: true,
-            }),
-            Paragraph.create'({
-              children: if parent != SectionId.root {
-                [TextRun.create("Cette étape de calcul intervient dans l'étape ")]->Array.concat(
-                  linkToSection(parent),
-                )
-              } else {
-                []
-              },
-            }),
-          ]
-          ->Array.concat([inputTable])
-          ->Array.concat(outputParagraphs)
-          ->Array.concat(explanationsParagraphs)
-        }
+        ]->Array.concat([
+          inputsTable,
+          Paragraph.create(""),
+          outputsTable,
+          Paragraph.create(""),
+          explanationsTable,
+        ])
       }
     })
   }
