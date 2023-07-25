@@ -162,76 +162,6 @@ module Docx = {
     }
   }
 
-  let rec loggedValueToFileChilds = (~level: int=0, val: LoggedValue.t): array<file_child> => {
-    switch val {
-    | Enum(_, (_, val)) => val->loggedValueToFileChilds(~level)
-    | Struct(_, l) =>
-      l
-      ->List.toArray
-      ->Array.filter(((_, value)) => Utils.loggedValueIsEmbeddable(value))
-      ->Array.sort(((_, v1), (_, v2)) => Utils.loggedValueCompare(v1, v2))
-      ->Array.flatMap(((field, value)) => {
-        switch value {
-        | Array([]) => []
-        | Array(_) =>
-          [
-            Paragraph.create'({
-              children: [
-                TextRun.create("Le champ "),
-                TextRun.create'({
-                  text: field,
-                  style: "VariableName",
-                }),
-                TextRun.create(" est un ensemble contenant : "),
-              ],
-              bullet: {level: level},
-            }),
-          ]->Array.concat(value->loggedValueToFileChilds(~level=level + 1))
-        | v if v->Utils.isLitLoggedValue => [
-            Paragraph.create'({
-              children: [
-                TextRun.create("Le champ "),
-                TextRun.create'({
-                  text: field,
-                  style: "VariableName",
-                }),
-                TextRun.create(" vaut "),
-                value->litLoggedValueToParagraphChild,
-              ],
-              bullet: {level: level},
-            }),
-          ]
-        | _ =>
-          [
-            Paragraph.create'({
-              children: [
-                TextRun.create("Le champ "),
-                TextRun.create'({
-                  text: field,
-                  style: "VariableName",
-                }),
-                TextRun.create(" vaut : "),
-              ],
-              bullet: {level: level},
-            }),
-          ]->Array.concat(value->loggedValueToFileChilds(~level))
-        }
-      })
-    | Array(val) =>
-      let id = ref(-1)
-      val->Array.flatMap(elem => {
-        id := id.contents + 1
-        [
-          Paragraph.create'({
-            children: [TextRun.create(`l'élément n°${id.contents->Int.toString} : `)],
-            bullet: {level: level},
-          }),
-        ]->Array.concat(elem->loggedValueToFileChilds(~level=level + 1))
-      })
-    | _ => []
-    }
-  }
-
   let getLawHeadingInTableRow = (
     ~bgColor: DsfrColors.t,
     pos: option<CatalaRuntime.sourcePosition>,
@@ -418,46 +348,6 @@ module Docx = {
         })
       }
     | _ => Js.Exn.raiseError(`Non-literal value is expected.`)
-    }
-  }
-
-  let varDefToFileChilds = ({name, value, pos}: var_def): array<file_child> => {
-    if value->Utils.isLitLoggedValue {
-      [
-        Paragraph.create'({
-          children: [
-            TextRun.create(`La variable `),
-            TextRun.create'({
-              text: `${name->Utils.lastExn}`,
-              style: "VariableName",
-            }),
-            TextRun.create(` vaut `),
-            value->litLoggedValueToParagraphChild,
-            TextRun.create(`. `),
-            pos->Option.mapWithDefault(TextRun.create(""), Utils.getLawHeadingBreadcrumbsLink),
-          ],
-        }),
-      ]
-    } else {
-      [
-        Paragraph.create'({
-          children: [
-            TextRun.create(`La variable `),
-            TextRun.create'({
-              text: `${name->Utils.lastExn}`,
-              style: "VariableName",
-            }),
-            TextRun.create(` (de type `),
-            TextRun.create'({
-              text: value->Utils.loggedValueKindToText,
-              italics: true,
-            }),
-            TextRun.create(`) `),
-            TextRun.create(` ${value->Utils.isArrayLoggedValue ? "est composé de" : "vaut"} : `),
-            pos->Option.mapWithDefault(TextRun.create(""), Utils.getLawHeadingBreadcrumbsLink),
-          ],
-        }),
-      ]->Array.concat(value->loggedValueToFileChilds)
     }
   }
 
