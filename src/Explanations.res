@@ -1,4 +1,6 @@
 open CatalaRuntime
+open Styles
+open DsfrColors
 
 module SectionId = UId.Int.Make()
 
@@ -83,22 +85,20 @@ let fromEvents = (events: array<event>): sectionMap => {
 module Docx = {
   open Docx
 
-  let linkToSection = (id: SectionId.t): array<Docx.paragraph_child> => {
+  let linkToSection = (~textRunOptions: TextRun.options={}, id: SectionId.t): array<
+    Docx.paragraph_child,
+  > => {
     let bookmarkId = `section-${id->Int.toString}`
+    let run = (~style="", text) => TextRun.create'({...textRunOptions, style, text})
 
     [
       InternalHyperlink.create({
         anchor: bookmarkId,
-        children: [
-          TextRun.create'({
-            text: `n°${id->Int.toString}`,
-            style: "Hyperlink",
-          }),
-        ],
+        children: [run(~style="Hyperlink", `n°${id->Int.toString}`)],
       }),
-      TextRun.create(` (p. `),
+      run(` (p. `),
       PageReference.create(bookmarkId),
-      TextRun.create(`)`),
+      run(`)`),
     ]
   }
 
@@ -243,19 +243,22 @@ module Docx = {
     }
   }
 
-  let getLawHeadingInTableRow = (pos: option<CatalaRuntime.sourcePosition>): option<TableRow.t> => {
+  let getLawHeadingInTableRow = (
+    ~bgColor: DsfrColors.t,
+    pos: option<CatalaRuntime.sourcePosition>,
+  ): option<TableRow.t> => {
     switch pos {
     | Some(pos) =>
       TableRow.create({
         children: [
           TableCell.create({
             children: [
-              Paragraph.create'({
-                children: [Utils.getLawHeadingBreadcrumbsLink(pos)],
-                spacing: {after: 40, before: 40},
-              }),
+              Utils.getNormalTableCellParagraph([Utils.getLawHeadingBreadcrumbsLink(pos)]),
             ],
             width: {size: 100.0, _type: #pct},
+            shading: {
+              fill: bgColor->toHex,
+            },
             borders: {
               top: {
                 style: #dotted,
@@ -265,111 +268,103 @@ module Docx = {
             },
           }),
         ],
-        height: {value: NumberOrPositiveUniversalMeasure.number(0.0), rule: #atLeast},
       })->Some
     | None => None
     }
   }
 
-  let litLogValueToCell = (val: LoggedValue.t): TableCell.t => {
-    TableCell.create({
-      children: [
-        Paragraph.create'({
-          alignment: #right,
-          children: [val->litLoggedValueToParagraphChild],
-          spacing: {before: 40, after: 40},
-        }),
-      ],
-      borders: {
-        bottom: {
-          style: #none,
-        },
-      },
-    })
-  }
-
-  let getEmptyCellArray = (length: int): array<TableCell.t> => {
-    Array.make(
-      ~length,
-      TableCell.create({
-        children: [],
-        width: {size: 4.0, _type: #pct},
-        borders: {
-          bottom: {
-            style: #none,
-          },
-        },
-      }),
+  let litLogValueToCell = (~bgColor: DsfrColors.t, val: LoggedValue.t): TableCell.t => {
+    Utils.getNormalTableCell(
+      ~bgColor,
+      [Utils.getNormalTableCellParagraph(~alignment=#right, [val->litLoggedValueToParagraphChild])],
     )
   }
 
-  let litVarDefToTableRow = (~depth=0, ~maxDepth, {name, value, pos}: var_def): array<
-    TableRow.t,
-  > => {
-    let varNameCell = TableCell.create({
-      children: [
-        Paragraph.create'({
-          children: [TextRun.create'({text: name->Utils.lastExn, style: "NormalTableCellText"})],
-          spacing: {before: 40, after: 40},
-        }),
-      ],
-      columnSpan: maxDepth - depth,
-      borders: {
-        bottom: {
-          style: #none,
+  let getEmptyCellArray = (~bgColor: DsfrColors.t, length: int): array<TableCell.t> => {
+    Array.make(~length, 0)->Array.mapWithIndex((_, idx) => {
+      TableCell.create({
+        children: [],
+        width: {size: 4.0, _type: #pct},
+        shading: {fill: bgColor->toHex},
+        borders: if idx != 0 {
+          {
+            left: {
+              style: #dotted,
+              color: "#000000",
+              size: 5.0,
+            },
+            right: {style: #none},
+          }
+        } else {
+          {
+            right: {style: #none},
+          }
         },
-      },
+      })
     })
+  }
 
+  let litVarDefToTableRow = (
+    ~depth=0,
+    ~maxDepth,
+    ~bgColor: DsfrColors.t,
+    {name, value, pos}: var_def,
+  ): array<TableRow.t> => {
+    let varNameCell = Utils.getNormalTextTableCell(
+      ~text=name->Utils.lastExn,
+      ~columnSpan=maxDepth - depth,
+      ~bgColor,
+    )
     let varDef = TableRow.create({
-      children: depth->getEmptyCellArray->Array.concat([varNameCell, value->litLogValueToCell]),
+      children: depth
+      ->getEmptyCellArray(~bgColor)
+      ->Array.concat([varNameCell, value->litLogValueToCell(~bgColor)]),
     })
 
-    switch getLawHeadingInTableRow(pos) {
+    switch getLawHeadingInTableRow(~bgColor, pos) {
     | Some(breadcrumpsRow) => [varDef, breadcrumpsRow]
     | None => [varDef]
     }
   }
 
   // TODO: could be factorized
-  let rec varDefToTableRow = (~depth=0, ~maxDepth, {name, value, pos}: var_def): array<
-    TableRow.t,
-  > => {
+  let rec varDefToTableRow = (
+    ~depth=0,
+    ~maxDepth,
+    ~bgColorRef: ref<DsfrColors.t>,
+    {name, value, pos}: var_def,
+  ): array<TableRow.t> => {
     switch value {
     | Enum(_, (_, val)) => {
         // Unwrap the enum
         let varDefWithoutInfos = Utils.getVarDefWithoutInfos(name, val)
         if val->isLitLoggedValue {
-          litVarDefToTableRow(~maxDepth, ~depth, varDefWithoutInfos)
+          litVarDefToTableRow(~maxDepth, ~depth, ~bgColor=bgColorRef.contents, varDefWithoutInfos)
         } else {
-          varDefToTableRow(~maxDepth, ~depth, varDefWithoutInfos)
+          varDefToTableRow(~maxDepth, ~depth, ~bgColorRef, varDefWithoutInfos)
         }
       }
     | Struct(structName, fields) => {
+        let bgColor = bgColorRef.contents
+
         let varNameRow = TableRow.create({
           children: depth
-          ->getEmptyCellArray
+          ->getEmptyCellArray(~bgColor)
           ->Array.concat([
-            TableCell.create({
-              children: [
-                Paragraph.create'({
-                  children: [
-                    TextRun.create'({text: name->Utils.lastExn, style: "BoldTableCellText"}),
-                    TextRun.create'({
-                      text: ` (de type ${structName->List.toArray->Array.joinWith(".")})`,
-                      style: "ItalicTableCellText",
-                    }),
-                  ],
-                  spacing: {before: 40, after: 40},
-                }),
+            Utils.getNormalTableCell(
+              ~columnSpan=maxDepth - depth + 1,
+              ~bgColor,
+              [
+                Utils.getNormalTableCellParagraph([
+                  TextRun.create'({text: name->Utils.lastExn, bold: true}),
+                  TextRun.create'({
+                    text: ` (de type ${structName->List.toArray->Array.joinWith(".")})`,
+                    italics: true,
+                    bold: true,
+                  }),
+                ]),
               ],
-              columnSpan: maxDepth - depth + 1,
-              borders: {
-                bottom: {
-                  style: #none,
-                },
-              },
-            }),
+            ),
           ]),
         })
 
@@ -380,10 +375,17 @@ module Docx = {
           ->Array.sort(((_, v1), (_, v2)) => Utils.loggedValueCompare(v1, v2))
           ->Array.flatMap(((field, value)) => {
             let varDefWithoutInfos = Utils.getVarDefWithoutInfos(list{field}, value)
+
+            bgColorRef := bgColorRef.contents->DsfrColors.getNextRowColor
             if value->isLitLoggedValue {
-              litVarDefToTableRow(~maxDepth, ~depth=depth + 1, varDefWithoutInfos)
+              litVarDefToTableRow(
+                ~maxDepth,
+                ~depth=depth + 1,
+                ~bgColor=bgColorRef.contents,
+                varDefWithoutInfos,
+              )
             } else {
-              varDefToTableRow(~maxDepth, ~depth=depth + 1, varDefWithoutInfos)
+              varDefToTableRow(~maxDepth, ~depth=depth + 1, ~bgColorRef, varDefWithoutInfos)
             }
           })
 
@@ -396,7 +398,7 @@ module Docx = {
           ],
         })
 
-        switch getLawHeadingInTableRow(pos) {
+        switch getLawHeadingInTableRow(~bgColor, pos) {
         | Some(breadcrumpsRow) => [emptyRow, varNameRow, breadcrumpsRow]
         | None => [emptyRow, varNameRow]
         }->Array.concat(valueRows)
@@ -409,10 +411,12 @@ module Docx = {
             name->List.map(n => n ++ " (élément " ++ elemNb.contents->Int.toString ++ ")"),
             value,
           )
+
+          bgColorRef := bgColorRef.contents->DsfrColors.getNextRowColor
           if value->isLitLoggedValue {
-            litVarDefToTableRow(~maxDepth, ~depth, varDefWithoutInfos)
+            litVarDefToTableRow(~maxDepth, ~depth, ~bgColor=bgColorRef.contents, varDefWithoutInfos)
           } else {
-            varDefToTableRow(~maxDepth, ~depth, varDefWithoutInfos)
+            varDefToTableRow(~maxDepth, ~depth, ~bgColorRef, varDefWithoutInfos)
           }
         })
       }
@@ -566,6 +570,9 @@ module Docx = {
       } else {
         let maxInputsDepth = inputs->getMaxInputDepth
         let columnWidths = Array.make(~length=maxInputsDepth - 1, 4.0)->Array.concat([65.0, 25.0])
+        let textHeadingStyle: TextRun.options = {bold: true, size: "10pt"}
+        let bgColorRef = ref(#blue_france_925)
+
         let inputTable = Table.create({
           columnWidths,
           width: {size: 100.0, _type: #pct},
@@ -576,12 +583,16 @@ module Docx = {
               tableHeader: true,
               children: [
                 TableCell.create({
+                  shading: {fill: bgColorRef.contents->toHex},
                   children: [
                     Paragraph.create'({
+                      spacing: {before: 80, after: 80},
                       children: [
-                        TextRun.create("Entrées utilisées pour l'étape de calcul"),
-                      ]->Array.concat(id->linkToSection),
-                      // style: "TableHeadingText",
+                        TextRun.create'({
+                          ...textHeadingStyle,
+                          text: "Entrées utilisées pour l'étape de calcul ",
+                        }),
+                      ]->Array.concat(id->linkToSection(~textRunOptions=textHeadingStyle)),
                     }),
                   ],
                 }),
@@ -592,10 +603,11 @@ module Docx = {
             ->Array.filter(({value}) => Utils.loggedValueIsEmbeddable(value))
             ->Array.sort((a, b) => Utils.loggedValueCompare(a.value, b.value))
             ->Array.flatMap(varDef => {
+              bgColorRef := bgColorRef.contents->getNextRowColor
               if varDef.value->isLitLoggedValue {
-                varDef->litVarDefToTableRow(~maxDepth=maxInputsDepth)
+                varDef->litVarDefToTableRow(~maxDepth=maxInputsDepth, ~bgColor=bgColorRef.contents)
               } else {
-                varDef->varDefToTableRow(~maxDepth=maxInputsDepth)
+                varDef->varDefToTableRow(~maxDepth=maxInputsDepth, ~bgColorRef)
               }
             }),
           ),

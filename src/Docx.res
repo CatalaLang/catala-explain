@@ -310,6 +310,53 @@ module TableCell = {
     start?: border_options,
   }
 
+  type shading_options = {
+    fill?: string,
+    color?: string,
+    @as("type")
+    _type?: [
+      | #clear
+      | #diagCross
+      | #diagStrip
+      | #horzCross
+      | #horzStripe
+      | #nil
+      | #pct10
+      | #pct12
+      | #pct15
+      | #pct20
+      | #pct25
+      | #pct30
+      | #pct35
+      | #pct37
+      | #pct40
+      | #pct45
+      | #pct5
+      | #pct50
+      | #pct55
+      | #pct60
+      | #pct62
+      | #pct65
+      | #pct70
+      | #pct75
+      | #pct80
+      | #pct85
+      | #pct87
+      | #pct90
+      | #pct95
+      | #solid
+      | #thinDiagCross
+      | #thinDiagStripe
+      | #thinHorzCross
+      | #thinHorzStripe
+      | #thinReverseDiagStripe
+      | #thinVertStripe
+      | #thinVertCross
+      | #thinReverseDiagStripe
+      | #thinVertStripe
+    ],
+  }
+
   type options = {
     // NOTE(@EmileRolley): children should only be Paragraph or Table
     children: array<file_child>,
@@ -320,6 +367,7 @@ module TableCell = {
     verticalAlign?: [#bottom | #center | #top],
     verticalMerge?: [#continue | #restart],
     width?: table_width,
+    shading?: shading_options,
   }
 
   @module("docx") @new

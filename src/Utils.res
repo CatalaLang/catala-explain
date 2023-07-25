@@ -1,5 +1,7 @@
 open Docx
 open CatalaRuntime
+open Styles
+open DsfrColors
 
 let lastExn = (l: list<'a>): 'a => l->List.reverse->List.headExn
 
@@ -127,4 +129,24 @@ let getVarDefWithoutInfos = (name: list<string>, value: LoggedValue.t): var_def 
   pos: None,
   fun_calls: None,
   io: {io_input: NoInput, io_output: false},
+}
+
+let getNormalTableCell = (~columnSpan=1, ~bgColor: DsfrColors.t, children): TableCell.t => {
+  TableCell.create({
+    shading: {fill: bgColor->toHex},
+    columnSpan,
+    children,
+  })
+}
+
+let getNormalTableCellParagraph = (~alignment: alignment_type=#left, children) => {
+  Paragraph.create'({
+    spacing: {before: 40, after: 40},
+    alignment,
+    children,
+  })
+}
+
+let getNormalTextTableCell = (~text, ~bgColor: DsfrColors.t, ~columnSpan): TableCell.t => {
+  [getNormalTableCellParagraph([TextRun.create(text)])]->getNormalTableCell(~bgColor, ~columnSpan)
 }

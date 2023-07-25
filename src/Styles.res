@@ -1,5 +1,26 @@
 open Docx
 
+module DsfrColors = {
+  type t = [
+    | #blue_france_925
+    | #blue_france_975
+  ]
+
+  let toHex = (color: t): string => {
+    switch color {
+    | #blue_france_925 => "f5f5fe"
+    | #blue_france_975 => "ffffff"
+    }
+  }
+
+  let getNextRowColor = (color: t) => {
+    switch color {
+    | #blue_france_925 => #blue_france_975
+    | #blue_france_975 => #blue_france_925
+    }
+  }
+}
+
 let default: Document.defaultStyle = {
   let baseHeadingStyle: Document.style = {
     run: {
@@ -67,13 +88,32 @@ let default: Document.defaultStyle = {
 
 let characterStyles: array<Docx.Document.style> = [
   {
+    id: "BoldText",
+    name: "BoldText",
+    basedOn: "Normal",
+    next: "Normal",
+    run: {
+      bold: true,
+    },
+  },
+  {
+    id: "TableHeadingText",
+    name: "TableHeadingText",
+    basedOn: "BoldText",
+    next: "Normal",
+    quickFormat: true,
+    run: {
+      size: "10pt",
+    },
+  },
+  {
     id: "ScopeName",
     name: "ScopeName",
     basedOn: "Normal",
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Fira Mono",
+      font: "Marianne",
       bold: true,
       color: "BB0066",
     },
@@ -85,7 +125,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Fira Mono",
+      font: "Marianne",
       bold: true,
       size: "8pt",
       color: "161616",
@@ -98,7 +138,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Fira Mono",
+      font: "Marianne",
       bold: true,
       color: "BA2121",
     },
@@ -110,7 +150,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Fira Mono",
+      font: "Marianne",
       bold: true,
       color: "008000",
     },
@@ -122,7 +162,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Fira Mono",
+      font: "Marianne",
       bold: true,
       color: "BB0066",
     },
@@ -134,7 +174,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Fira Mono",
+      font: "Marianne",
       bold: true,
       color: "BB0066",
     },
@@ -146,7 +186,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Fira Mono",
+      font: "Marianne",
       bold: true,
       color: "0000FF",
     },
@@ -158,7 +198,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Fira Mono",
+      font: "Marianne",
       italics: true,
     },
   },
