@@ -1,7 +1,5 @@
 open Docx
 open CatalaRuntime
-open Styles
-open DSFRColors
 
 let lastExn = (l: list<'a>): 'a => l->List.reverse->List.headExn
 
@@ -60,23 +58,6 @@ let orderAndFilterEmpty = (values: array<LoggedValue.t>): array<LoggedValue.t> =
   values
   ->Array.filter(val => !loggedValueIsEmbeddable(val))
   ->Array.sort((a, b) => loggedValueOrder(a) - loggedValueOrder(b))
-}
-
-let rec loggedValueKindToText = (value: LoggedValue.t): string => {
-  switch value {
-  | Enum(_, (name, v)) if v != Unit => name
-  | Struct(infos, _) => infos->lastExn
-  | Array(elems) =>
-    if elems->Array.length == 0 {
-      "ensemble vide"
-    } else {
-      "ensemble d'" ++ elems->Array.getUnsafe(0)->loggedValueKindToText
-    }
-  | val =>
-    Js.Exn.raiseError(
-      "Expected a struct or an enum with a value got" ++ LoggedValue.loggedValueToString(val, 0),
-    )
-  }
 }
 
 let getLawHeadingBreadcrumbsLink = (

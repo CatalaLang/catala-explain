@@ -20,6 +20,19 @@ let isLiteral = (t: t): bool => {
   }
 }
 
+let compare = (v: t, v': t): int => {
+  let order = (v: t): int => {
+    switch v {
+    | Section(_) => 3
+    | Fields(_) => 2
+    | Array(_) => 1
+    | _ => 0
+    }
+  }
+
+  order(v) - order(v')
+}
+
 let rec isEmpty = (t: t): bool => {
   switch t {
   | Section({items}) => isEmpty(items)
@@ -103,12 +116,13 @@ let fromJSON = (~json: JSON.t, ~schema: JSON.t, ~uiSchema: JSON.t): t => {
 
 module Docx = {
   open Docx
+
+  // TODO: manage the language
   let litToStyledTextRun = (lit: t): paragraph_child => {
     switch lit {
     | LitBool(b) =>
-      // TODO: manage the language
       TextRun.create'({
-        text: b ? "vrai" : "faux",
+        text: b ? "oui" : "non",
         style: "BooleanLiteral",
       })
     | LitNumber(f) =>
@@ -139,60 +153,53 @@ module Docx = {
   }
 
   let toFileChild = (userInputs: t): array<file_child> => {
-    let rec aux = (~input: t, level: HeadingLevel.t, ~prevInput: t) => {
+    let rec aux = (~elemId=?, ~level: HeadingLevel.t, ~prevInput: t, input: t) => {
       switch input {
       | Section({title, items}) =>
         [
           Paragraph.create'({
-            children: [TextRun.create(title)],
+            children: [
+              TextRun.create(
+                switch (prevInput, elemId) {
+                | (Array(_), Some(id)) => `${title} n°${id->Int.toString}`
+                | _ => title
+                },
+              ),
+            ],
             heading: level,
           }),
-        ]->Array.concat(aux(~input=items, ~prevInput=input, getNextHeadingLevel(level)))
+        ]->Array.concat(items->aux(~prevInput=input, ~level=getNextHeadingLevel(level)))
       | Array(inputs) =>
-        let id = ref(-1)
+        let id = ref(0)
         inputs->Array.flatMap(arrayInput => {
           id := id.contents + 1
-          let nxtLvl = getNextHeadingLevel(level)
-          let elemLabel = switch prevInput {
-          | Field({tabLabel: Some(label)}) => label
-          | _ => "Élément"
-          }
-
-          [
-            Paragraph.create'({
-              children: [TextRun.create(`${elemLabel} n°${id.contents->Int.toString}`)],
-              heading: nxtLvl,
-            }),
-          ]->Array.concat(aux(~input=arrayInput, ~prevInput=input, getNextHeadingLevel(nxtLvl)))
+          arrayInput->aux(~elemId=id.contents, ~prevInput=input, ~level=getNextHeadingLevel(level))
         })
       | Fields(items) =>
         items
         ->Array.sort((a, b) => {
-          // Display section last
           switch (a, b) {
-          | (Section(_), _) | (_, Section(_)) => -1
-          | (Array(_), _) | (_, Array(_)) => -1
-          | _ => 1
+          | (Field({value: v}), Field({value: v'})) => compare(v, v')
+          | _ => Js.Exn.raiseError("[Fields] expects to only contains [Field] values")
           }
         })
-        ->Array.flatMap(aux(~input=_, ~prevInput=input, getNextHeadingLevel(level)))
-      | Field({name, value}) if isLiteral(value) => [
+        ->Array.flatMap(i => i->aux(~prevInput=input, ~level=getNextHeadingLevel(level)))
+      | Field({name, value}) if value->isLiteral => [
           Paragraph.create'({
             children: [TextRun.create(`${name} : `), litToStyledTextRun(value)],
           }),
         ]
-      | Field({value}) if isEmpty(value) => []
-
+      | Field({value}) if value->isEmpty => []
       | Field({name, value}) =>
         [
           Paragraph.create'({
             children: [TextRun.create(name)],
             heading: level,
           }),
-        ]->Array.concat(aux(~input=value, ~prevInput=input, getNextHeadingLevel(level)))
+        ]->Array.concat(value->aux(~prevInput=input, ~level=getNextHeadingLevel(level)))
       | _ => failwith("invalid user inputs in [userInputsToFileChild]")
       }
     }
-    aux(~input=userInputs, ~prevInput=userInputs, #Heading2)
+    userInputs->aux(~prevInput=userInputs, ~level=#Heading2)
   }
 }
