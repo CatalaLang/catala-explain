@@ -1,7 +1,7 @@
 open Docx
 open CatalaRuntime
 open Styles
-open DsfrColors
+open DSFRColors
 
 let lastExn = (l: list<'a>): 'a => l->List.reverse->List.headExn
 
@@ -172,39 +172,4 @@ let getMaxDepth = (inputs: array<var_def>): int => {
     }
   })
   ->Array.reduce(1, (a, b) => Math.Int.max(a, b))
-}
-
-let getNormalTableCell = (
-  ~columnSpan=1,
-  ~borders: TableCell.table_cell_borders_options={},
-  ~bgColor: DsfrColors.t,
-  children,
-): TableCell.t => {
-  TableCell.create({
-    shading: {fill: bgColor->toHex},
-    borders,
-    columnSpan,
-    children,
-  })
-}
-
-let getNormalTableCellParagraph = (~alignment: alignment_type=#left, children) => {
-  Paragraph.create'({
-    spacing: {before: 40, after: 40},
-    alignment,
-    children,
-  })
-}
-
-let getNormalTextTableCell = (
-  ~borders: TableCell.table_cell_borders_options={},
-  ~bgColor: DsfrColors.t,
-  ~columnSpan,
-  text,
-): TableCell.t => {
-  [getNormalTableCellParagraph([TextRun.create(text)])]->getNormalTableCell(
-    ~bgColor,
-    ~borders,
-    ~columnSpan,
-  )
 }

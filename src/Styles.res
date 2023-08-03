@@ -1,6 +1,6 @@
 open Docx
 
-module DsfrColors = {
+module DSFRColors = {
   type t = [
     | #blue_france_925
     | #blue_france_975
@@ -13,13 +13,13 @@ module DsfrColors = {
 
   let toHex = (color: t): string => {
     switch color {
-    | #blue_france_925 => "e3e3fd"
-    | #blue_france_975 => "f5f5fe"
-    | #red_marianne_925 => "fddede"
-    | #red_marianne_975 => "fef4f4"
-    | #green_emeraude_925 => "fde39c"
-    | #green_emeraude_975 => "fef6e3"
-    | #grey_main_525 => "666666"
+    | #blue_france_925 => "#e3e3fd"
+    | #blue_france_975 => "#f5f5fe"
+    | #red_marianne_925 => "#fddede"
+    | #red_marianne_975 => "#fef4f4"
+    | #green_emeraude_925 => "#fde39c"
+    | #green_emeraude_975 => "#fef6e3"
+    | #grey_main_525 => "#666666"
     }
   }
 
