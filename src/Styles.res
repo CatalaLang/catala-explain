@@ -56,37 +56,37 @@ let default: Document.defaultStyle = {
     heading1: {
       run: {
         ...baseHeadingStyleRun,
-        size: "34pt",
+        size: "28pt",
       },
     },
     heading2: {
       run: {
         ...baseHeadingStyleRun,
-        size: "15pt",
+        size: "24pt",
       },
     },
     heading3: {
       run: {
         ...baseHeadingStyleRun,
-        size: "12pt",
+        size: "22pt",
       },
     },
     heading4: {
       run: {
         ...baseHeadingStyleRun,
-        size: "22pt",
+        size: "18pt",
       },
     },
     heading5: {
       run: {
         ...baseHeadingStyleRun,
-        size: "20pt",
+        size: "16pt",
       },
     },
     heading6: {
       run: {
         ...baseHeadingStyleRun,
-        size: "18pt",
+        size: "14pt",
       },
     },
     hyperlink: {
