@@ -1,34 +1,35 @@
-open Docx
+open Docx2
+open FileChild
 open Promise
 
 let getUserInputDocSection = (
   ~userInputs: JSON.t,
   ~schema: JSON.t,
   ~uiSchema: JSON.t,
-): Document.section => {
+): SectionOptions.t => {
   {
-    children: [
-      Paragraph.create'({text: "Entrées du programme", heading: #Heading1}),
-    ]->Array.concat(
-      UserInputs.fromJSON(~json=userInputs, ~schema, ~uiSchema)->UserInputs.Docx.toFileChild,
-    ),
+    children: [p'({text: "Entrées du programme", heading: HeadingLevel.h1})],
+    // ->Array.concat(
+    //      UserInputs.fromJSON(~json=userInputs, ~schema, ~uiSchema)->UserInputs.Docx.toFileChild,
+    //    ),
   }
 }
 
-let getResultDocSection = (explanationSectionMap: Explanations.sectionMap): Document.section => {
+let getResultDocSection = (explanationSectionMap: Explanations.sectionMap): SectionOptions.t => {
   {
-    children: [
-      Paragraph.create'({text: "Résultats du programme", heading: #Heading1}),
-    ]->Array.concat(explanationSectionMap->Explanations.Docx.outputToFileChilds),
+    children: [p'({text: "Résultats du programme", heading: HeadingLevel.h1})],
+    // ->Array.concat(
+    //      explanationSectionMap->Explanations.Docx.outputToFileChilds,
+    //    ),
   }
 }
 
 let getExplanationsDocSection = (
   explanationSectionMap: Explanations.sectionMap,
-): Document.section => {
+): SectionOptions.t => {
   {
     children: [
-      // Paragraph.create'({text: "Explications", heading: #Heading1}),
+      p'({text: "Explications", heading: HeadingLevel.h1}),
       // Paragraph.create'({
       //   children: [
       //     TextRun.create("Vous trouverez ci-dessous les explications détaillées du calcul."),
@@ -39,7 +40,8 @@ let getExplanationsDocSection = (
       //     ),
       //   ],
       // }),
-    ]->Array.concat(explanationSectionMap->Explanations.Docx.explanationsToFileChilds),
+    ],
+    // ]->Array.concat(explanationSectionMap->Explanations.Docx.explanationsToFileChilds),
   }
 }
 
@@ -56,21 +58,21 @@ let version = "0.1.0"
 
 let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntime.event>) => {
   let explanationSectionMap = events->Explanations.fromEvents
-  Document.create({
+  Document.make({
     title: opts.title->Option.getUnsafe,
     creator: opts.creator->Option.getUnsafe,
     description: opts.description->Option.getUnsafe,
     sections: [
       {
         headers: {
-          default: Header.create({
+          default: Headers.Header.make({
             children: [
-              Paragraph.create'({
-                alignment: #right,
+              p'({
+                alignment: AlignmentType.right,
                 children: [
-                  TextRun.create(`catala-explain v${version}`),
-                  TextRun.create(" - "),
-                  TextRun.create(
+                  TextRun.make(`catala-explain v${version}`),
+                  TextRun.make(" - "),
+                  TextRun.make(
                     `${Date.now()
                       ->Date.fromTime
                       ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #short})}`,
@@ -81,16 +83,16 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
           }),
         },
         footers: {
-          default: Footer.create({
+          default: Headers.Footer.make({
             children: [
-              Paragraph.create'({
-                alignment: #right,
+              p'({
+                alignment: AlignmentType.right,
                 children: [
-                  TextRun.create'({
+                  TextRun.make'({
                     children: [
-                      TextRun.Children.pageNumber(PageNumber.current),
-                      TextRun.Children.string(" / "),
-                      TextRun.Children.pageNumber(PageNumber.totalPages),
+                      TextRun.pageNumber(PageNumber.current),
+                      TextRun.string(" / "),
+                      TextRun.pageNumber(PageNumber.totalPages),
                     ],
                   }),
                 ],
@@ -118,18 +120,19 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
           // }),
         ],
       },
-      // getUserInputDocSection(~userInputs, ~schema=opts.schema, ~uiSchema=opts.uiSchema),
+      getUserInputDocSection(~userInputs, ~schema=opts.schema, ~uiSchema=opts.uiSchema),
       // explanationSectionMap->getResultDocSection,
-      explanationSectionMap->getExplanationsDocSection,
+      // explanationSectionMap->getExplanationsDocSection,
     ],
     styles: {
       default: Styles.default,
       characterStyles: Styles.characterStyles,
     },
   })
-  ->Packer.toBlob
+  ->Docx2.Packer.toBlob
   ->thenResolve(blob => {
-    FileSaver.saveAs(blob, `${opts.filename}.docx`)
+    Console.log2("blob", blob)
+    Docx.FileSaver.saveAs(blob, `${opts.filename}.docx`)
   })
   ->ignore
 }

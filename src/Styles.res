@@ -1,4 +1,5 @@
-open Docx
+open Docx2
+open Util
 
 module DSFRColors = {
   type t = [
@@ -36,10 +37,12 @@ module DSFRColors = {
   }
 }
 
-let default: Document.defaultStyle = {
-  let baseHeadingStyle: Document.style = {
+let marianneFont = Font.fromString("Marianne")
+
+let default: StylesOptions.defaultStylesOptions = {
+  let baseHeadingStyle: StylesOptions.baseCharacterStyleOptions = {
     run: {
-      font: "Marianne",
+      font: marianneFont,
       bold: true,
       color: "161616",
     },
@@ -48,45 +51,45 @@ let default: Document.defaultStyle = {
   {
     document: {
       run: {
-        font: "Marianne",
+        font: marianneFont,
         color: "3a3a3a",
-        size: "8pt",
+        size: Types.NumberOrPositiveUniversalMeasure.fromString("8pt"),
       },
     },
     heading1: {
       run: {
         ...baseHeadingStyleRun,
-        size: "28pt",
+        size: Types.NumberOrPositiveUniversalMeasure.fromString("28pt"),
       },
     },
     heading2: {
       run: {
         ...baseHeadingStyleRun,
-        size: "24pt",
+        size: Types.NumberOrPositiveUniversalMeasure.fromString("24pt"),
       },
     },
     heading3: {
       run: {
         ...baseHeadingStyleRun,
-        size: "22pt",
+        size: Types.NumberOrPositiveUniversalMeasure.fromString("22pt"),
       },
     },
     heading4: {
       run: {
         ...baseHeadingStyleRun,
-        size: "18pt",
+        size: Types.NumberOrPositiveUniversalMeasure.fromString("18pt"),
       },
     },
     heading5: {
       run: {
         ...baseHeadingStyleRun,
-        size: "16pt",
+        size: Types.NumberOrPositiveUniversalMeasure.fromString("16pt"),
       },
     },
     heading6: {
       run: {
         ...baseHeadingStyleRun,
-        size: "14pt",
+        size: Types.NumberOrPositiveUniversalMeasure.fromString("14pt"),
       },
     },
     hyperlink: {
@@ -101,7 +104,7 @@ let default: Document.defaultStyle = {
   }
 }
 
-let characterStyles: array<Docx.Document.style> = [
+let characterStyles: array<StylesOptions.characterStyleOptions> = [
   {
     id: "BoldText",
     name: "BoldText",
@@ -118,7 +121,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      size: "10pt",
+      size: Types.NumberOrPositiveUniversalMeasure.fromString("10pt"),
     },
   },
   {
@@ -128,7 +131,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Marianne",
+      font: marianneFont,
       bold: true,
       color: "BB0066",
     },
@@ -140,9 +143,9 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Marianne",
+      font: marianneFont,
       bold: true,
-      size: "8pt",
+      size: Types.NumberOrPositiveUniversalMeasure.fromString("8pt"),
       color: "161616",
     },
   },
@@ -153,7 +156,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Marianne",
+      font: marianneFont,
       bold: true,
       color: "BA2121",
     },
@@ -165,7 +168,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Marianne",
+      font: marianneFont,
       bold: true,
       color: "008000",
     },
@@ -177,7 +180,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Marianne",
+      font: marianneFont,
       bold: true,
       color: "BB0066",
     },
@@ -189,7 +192,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Marianne",
+      font: marianneFont,
       bold: true,
       color: "BB0066",
     },
@@ -201,7 +204,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Marianne",
+      font: marianneFont,
       bold: true,
       color: "0000FF",
     },
@@ -213,7 +216,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      font: "Marianne",
+      font: marianneFont,
       italics: true,
     },
   },
@@ -237,7 +240,7 @@ let characterStyles: array<Docx.Document.style> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      size: "8pt",
+      size: Types.NumberOrPositiveUniversalMeasure.fromString("8pt"),
     },
   },
 ]
