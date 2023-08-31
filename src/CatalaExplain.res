@@ -1,5 +1,4 @@
-open Docx2
-open FileChild
+open Docx
 open Promise
 
 let getUserInputDocSection = (
@@ -8,19 +7,17 @@ let getUserInputDocSection = (
   ~uiSchema: JSON.t,
 ): SectionOptions.t => {
   {
-    children: [p'({text: "Entrées du programme", heading: HeadingLevel.h1})],
-    // ->Array.concat(
-    //      UserInputs.fromJSON(~json=userInputs, ~schema, ~uiSchema)->UserInputs.Docx.toFileChild,
-    //    ),
+    children: [FileChild.p'({text: "Entrées du programme", heading: #Heading1})]->Array.concat(
+      UserInputs.fromJSON(~json=userInputs, ~schema, ~uiSchema)->UserInputs.Docx.toFileChild,
+    ),
   }
 }
 
 let getResultDocSection = (explanationSectionMap: Explanations.sectionMap): SectionOptions.t => {
   {
-    children: [p'({text: "Résultats du programme", heading: HeadingLevel.h1})],
-    // ->Array.concat(
-    //      explanationSectionMap->Explanations.Docx.outputToFileChilds,
-    //    ),
+    children: [FileChild.p'({text: "Résultats du programme", heading: #Heading1})]->Array.concat(
+      explanationSectionMap->Explanations.Docx.outputToFileChilds,
+    ),
   }
 }
 
@@ -29,19 +26,18 @@ let getExplanationsDocSection = (
 ): SectionOptions.t => {
   {
     children: [
-      p'({text: "Explications", heading: HeadingLevel.h1}),
-      // Paragraph.create'({
-      //   children: [
-      //     TextRun.create("Vous trouverez ci-dessous les explications détaillées du calcul."),
-      //     TextRun.create("Pour chaque "),
-      //     TextRun.create'({text: "étape", italics: true}),
-      //     TextRun.create(
-      //       " vous trouverez une explication de la règle de calcul utilisée, ainsi que les valeurs des variables utilisées et de potentielles sous-étapes nécessaires.",
-      //     ),
-      //   ],
-      // }),
-    ],
-    // ]->Array.concat(explanationSectionMap->Explanations.Docx.explanationsToFileChilds),
+      FileChild.p'({text: "Explications", heading: #Heading1}),
+      FileChild.p'({
+        children: [
+          TextRun.make("Vous trouverez ci-dessous les explications détaillées du calcul."),
+          TextRun.make("Pour chaque "),
+          TextRun.make'({text: "étape", italics: true}),
+          TextRun.make(
+            " vous trouverez une explication de la règle de calcul utilisée, ainsi que les valeurs des variables utilisées et de potentielles sous-étapes nécessaires.",
+          ),
+        ],
+      }),
+    ]->Array.concat(explanationSectionMap->Explanations.Docx.explanationsToFileChilds),
   }
 }
 
@@ -67,8 +63,8 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
         headers: {
           default: Headers.Header.make({
             children: [
-              p'({
-                alignment: AlignmentType.right,
+              FileChild.p'({
+                alignment: #right,
                 children: [
                   TextRun.make(`catala-explain v${version}`),
                   TextRun.make(" - "),
@@ -85,14 +81,14 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
         footers: {
           default: Headers.Footer.make({
             children: [
-              p'({
-                alignment: AlignmentType.right,
+              FileChild.p'({
+                alignment: #right,
                 children: [
                   TextRun.make'({
                     children: [
-                      TextRun.pageNumber(PageNumber.current),
+                      TextRun.pageNumber(#CURRENT),
                       TextRun.string(" / "),
-                      TextRun.pageNumber(PageNumber.totalPages),
+                      TextRun.pageNumber(#TOTAL_PAGES),
                     ],
                   }),
                 ],
@@ -101,38 +97,37 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
           }),
         },
         children: [
-          // Paragraph.create'({
-          //   text: opts.title->Option.getWithDefault("Explication individuelle du calcul"),
-          //   heading: #Title,
-          //   alignment: #center,
-          // }),
-          // Paragraph.create'({
-          //   text: opts.description->Option.getUnsafe,
-          //   heading: #Heading2,
-          //   alignment: #center,
-          // }),
-          // Paragraph.create'({
-          //   text: `Généré le ${Date.now()
-          //     ->Date.fromTime
-          //     ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long})}`,
-          //   heading: #Heading4,
-          //   alignment: #center,
-          // }),
+          FileChild.p'({
+            text: opts.title->Option.getWithDefault("Explication individuelle du calcul"),
+            heading: #Title,
+            alignment: #center,
+          }),
+          FileChild.p'({
+            text: opts.description->Option.getUnsafe,
+            heading: #Heading2,
+            alignment: #center,
+          }),
+          FileChild.p'({
+            text: `Généré le ${Date.now()
+              ->Date.fromTime
+              ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long})}`,
+            heading: #Heading4,
+            alignment: #center,
+          }),
         ],
       },
       getUserInputDocSection(~userInputs, ~schema=opts.schema, ~uiSchema=opts.uiSchema),
-      // explanationSectionMap->getResultDocSection,
-      // explanationSectionMap->getExplanationsDocSection,
+      explanationSectionMap->getResultDocSection,
+      explanationSectionMap->getExplanationsDocSection,
     ],
     styles: {
       default: Styles.default,
       characterStyles: Styles.characterStyles,
     },
   })
-  ->Docx2.Packer.toBlob
+  ->Docx.Packer.toBlob
   ->thenResolve(blob => {
-    Console.log2("blob", blob)
-    Docx.FileSaver.saveAs(blob, `${opts.filename}.docx`)
+    FileSaver.saveAs(blob, `${opts.filename}.docx`)
   })
   ->ignore
 }

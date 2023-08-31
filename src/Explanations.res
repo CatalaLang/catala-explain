@@ -2,6 +2,8 @@ open CatalaRuntime
 open Styles
 open DSFRColors
 
+module DocxTypes = Docx.Util.Types
+
 module SectionId = UId.Int.Make()
 
 type rec section = {
@@ -31,7 +33,7 @@ type parseCtx = {
 }
 
 let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explanation> => {
-  let createNewSection = (name, inputs, body, outputs) => {
+  let makeNewSection = (name, inputs, body, outputs) => {
     let id = SectionId.fresh()
     let title = Utils.getSectionTitle(name)
     let section = {
@@ -51,10 +53,10 @@ let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explana
     | VarComputation(var_def) => Def(var_def)
     | SubScopeCall({sname, inputs, sbody}) => {
         let outputs = sbody->List.toArray->Array.reverse->getOutputs
-        createNewSection(sname, inputs, sbody, outputs)
+        makeNewSection(sname, inputs, sbody, outputs)
       }
     | FunCall({fun_name, fun_inputs, body, output}) =>
-      createNewSection(fun_name, fun_inputs, body, [output])
+      makeNewSection(fun_name, fun_inputs, body, [output])
     }
   })
 }
@@ -86,27 +88,27 @@ module Docx = {
   open Docx
 
   let linkToSection = (~textRunOptions: TextRun.options={}, id: SectionId.t): array<
-    Docx.paragraph_child,
+    Docx.ParagraphChild.t,
   > => {
     let bookmarkId = `section-${id->Int.toString}`
-    let run = (~style="", text) => TextRun.create'({...textRunOptions, style, text})
+    let run = (~style="", text) => TextRun.make'({...textRunOptions, style, text})
 
     [
-      InternalHyperlink.create({
+      InternalHyperlink.make({
         anchor: bookmarkId,
         children: [run(~style="Hyperlink", `n°${id->Int.toString}`)],
       }),
       run(` (p. `),
-      PageReference.create(bookmarkId),
+      PageReference.make(bookmarkId),
       run(`)`),
     ]
   }
 
-  let bookmarkSection = (id: SectionId.t, title: string): Docx.paragraph_child => {
-    Bookmark.create({
+  let bookmarkSection = (id: SectionId.t, title: string): Docx.ParagraphChild.t => {
+    Bookmark.make({
       id: `section-${id->Int.toString}`,
       children: [
-        TextRun.create'({
+        TextRun.make'({
           text: `Étape n°${id->Int.toString} : ${title}`,
         }),
       ],
@@ -114,7 +116,9 @@ module Docx = {
   }
 
   @raises(Error.t)
-  let outputToFileChilds = (explanationSectionMap: sectionMap): array<file_child> => {
+  let outputToFileChilds = (explanationSectionMap: sectionMap): array<FileChild.t> => {
+    open FileChild
+
     let {outputs, explanations} =
       explanationSectionMap
       ->Map.get(SectionId.root)
@@ -129,30 +133,30 @@ module Docx = {
     let output = outputs->Array.get(0)
     let nbRefs = refs->Array.length
     [
-      Paragraph.create'({
+      p'({
         children: output
         ->Option.map(output => [
-          TextRun.create(`La valeur calculée par le programme est `),
-          TextRun.create'({
+          TextRun.make(`La valeur calculée par le programme est `),
+          TextRun.make'({
             text: output.name->List.reverse->List.headExn,
             style: "VariableName",
           }),
-          TextRun.create(` et vaut `),
+          TextRun.make(` et vaut `),
           if output.value->Utils.isLitLoggedValue {
             output.value->TableUtils.litLoggedValueToParagraphChild
           } else {
-            TextRun.create("TODO (non-literal value)")
+            TextRun.make("TODO (non-literal value)")
           },
-          TextRun.create("."),
+          TextRun.make("."),
         ])
         ->Option.getWithDefault([]),
       }),
-      Paragraph.create'({
+      p'({
         children: [
           if nbRefs == 1 {
-            TextRun.create(`La valeur a été calculée à partir de l'étape de calcul `)
+            TextRun.make(`La valeur a été calculée à partir de l'étape de calcul `)
           } else {
-            TextRun.create(`La valeur a été calculée à partir des étapes de calculs `)
+            TextRun.make(`La valeur a été calculée à partir des étapes de calculs `)
           },
         ]->Array.concat(
           refs
@@ -162,9 +166,9 @@ module Docx = {
             | Ref(id) =>
               linkToSection(id)->Array.concat([
                 if isLast {
-                  TextRun.create(".")
+                  TextRun.make(".")
                 } else {
-                  TextRun.create(", ")
+                  TextRun.make(", ")
                 },
               ])
             | _ => []
@@ -182,35 +186,35 @@ module Docx = {
     ~maxDepth: int,
     ~bgColor: DSFRColors.t,
     ~contentRows: array<TableRow.t>,
-  ): file_child => {
+  ): Table.t => {
     let textHeadingStyle: TextRun.options = {bold: true, size: "10pt"}
-    let innerBorder = {style: #single, color: #grey_main_525->toHex, size: 0.25}
+    // let innerBorder = {style: #single, color: #grey_main_525->toHex, size: 0.25}
 
-    Table.create({
+    Table.make({
       columnWidths: Array.make(~length=maxDepth - 1, 4.0)->Array.concat([65.0, 25.0]),
-      width: {size: 100.0, _type: #pct},
+      width: {size: Utils.NumPctUni.fromFloat(100.0), type_: #pct},
       alignment: #center,
       borders: {
         bottom: {style: #single},
-        insideHorizontal: innerBorder,
-        insideVertical: innerBorder,
+        // insideHorizontal: innerBorder,
+        // insideVertical: innerBorder,
       },
       rows: [
-        TableRow.create({
+        TableRow.make({
           tableHeader: true,
           children: [
-            TableCell.create({
+            TableCell.make({
               shading: {fill: bgColor->toHex},
               children: [
-                Paragraph.create'({
-                  spacing: {before: 80, after: 80},
+                Paragraph.make'({
+                  spacing: {before: 80.0, after: 80.0},
                   children: [
-                    TextRun.create'({
+                    TextRun.make'({
                       ...textHeadingStyle,
                       text: headingText ++ " ",
                     }),
                   ]->Array.concat(id->linkToSection(~textRunOptions=textHeadingStyle)),
-                }),
+                })->DocxTypes.ParagraphOrTable.fromParagraph,
               ],
             }),
           ],
@@ -269,13 +273,13 @@ module Docx = {
           varDef->TableUtils.varDefToTableRow(~maxDepth, ~bgColorRef)
         }
       | Ref(id) => [
-          TableRow.create({
+          TableRow.make({
             children: [
               TableUtils.getNormalTableCell(
                 ~bgColor=bgColorRef.contents,
                 [
                   TableUtils.getNormalTableCellParagraph(
-                    [TextRun.create("Calcul de l'étape ")]->Array.concat(linkToSection(id)),
+                    [TextRun.make("Calcul de l'étape ")]->Array.concat(linkToSection(id)),
                   ),
                 ],
               ),
@@ -288,7 +292,7 @@ module Docx = {
     getTable(~id, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
   }
 
-  let explanationsToFileChilds = (explanationSectionMap: sectionMap): array<file_child> => {
+  let explanationsToFileChilds = (explanationSectionMap: sectionMap): array<FileChild.t> => {
     explanationSectionMap
     ->Map.entries
     ->Iterator.toArray
@@ -298,14 +302,14 @@ module Docx = {
         []
       } else {
         [
-          Paragraph.create'({
+          FileChild.p'({
             heading: #Heading2,
             children: [bookmarkSection(id, title)],
             pageBreakBefore: true,
           }),
-          Paragraph.create'({
+          FileChild.p'({
             children: if parent != SectionId.root {
-              [TextRun.create("Cette étape de calcul intervient dans l'étape ")]->Array.concat(
+              [TextRun.make("Cette étape de calcul intervient dans l'étape ")]->Array.concat(
                 linkToSection(parent),
               )
             } else {
@@ -313,11 +317,11 @@ module Docx = {
             },
           }),
         ]->Array.concat([
-          getInputsTable(id, inputs),
-          Paragraph.create(""),
-          getOutputsTable(id, outputs),
-          Paragraph.create(""),
-          getExplanationsTable(id, explanations),
+          FileChild.fromTable(getInputsTable(id, inputs)),
+          FileChild.p(""),
+          FileChild.fromTable(getOutputsTable(id, outputs)),
+          FileChild.p(""),
+          FileChild.fromTable(getExplanationsTable(id, explanations)),
         ])
       }
     })

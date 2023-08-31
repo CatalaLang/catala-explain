@@ -1,4 +1,4 @@
-open Docx2
+open Docx
 open Util
 
 module DSFRColors = {

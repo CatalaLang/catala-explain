@@ -1,6 +1,8 @@
 open Docx
 open CatalaRuntime
 
+module NumPctUni = Util.Types.NumberOrPercentageOrUniversalMeasure
+
 let lastExn = (l: list<'a>): 'a => l->List.reverse->List.headExn
 
 let isDate = (str: string): bool => {
@@ -62,10 +64,10 @@ let orderAndFilterEmpty = (values: array<LoggedValue.t>): array<LoggedValue.t> =
 
 let getLawHeadingBreadcrumbsLink = (
   {filename, start_line, end_line, law_headings}: sourcePosition,
-): paragraph_child => {
-  ExternalHyperlink.create({
+): ParagraphChild.t => {
+  ExternalHyperlink.make({
     children: [
-      TextRun.create'({
+      TextRun.make'({
         text: law_headings->Array.joinWith(" > "),
         size: "6pt",
         underline: {

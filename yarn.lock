@@ -138,6 +138,11 @@ reanalyze@^2.23.0:
   resolved "https://registry.yarnpkg.com/reanalyze/-/reanalyze-2.23.0.tgz#0e2a3109518ccad0ba04366ec1811db17fa07b7e"
   integrity sha512-5pkH13pX1PrZFkIfmZUjKtYCqzFY2jTaEjBsqyR9SM3HLexAtkHTa4vLHTwuYk167KuO1uwWyEppo8NJIjfkOw==
 
+rescript-docx@^0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/rescript-docx/-/rescript-docx-0.1.1.tgz#19df3cf7a7d433a418c1f5dd92703227393a699e"
+  integrity sha512-W8hM/htBi0aRXHb/nC9srIlQze4d65gZ5b+p4UojxJgelI66QnPjoluxNMupMfJa4GTBTb5q6OAZwjIggZgAiQ==
+
 rescript@^10.1.4:
   version "10.1.4"
   resolved "https://registry.yarnpkg.com/rescript/-/rescript-10.1.4.tgz#0f37710d371f32a704f17b4e804f66ce3c79a305"
