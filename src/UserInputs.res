@@ -118,48 +118,49 @@ module Docx = {
   open Docx
 
   // TODO: manage the language
-  let litToStyledTextRun = (lit: t): paragraph_child => {
+  let litToStyledTextRun = (lit: t): ParagraphChild.t => {
     switch lit {
     | LitBool(b) =>
-      TextRun.create'({
+      TextRun.make'({
         text: b ? "oui" : "non",
         style: "BooleanLiteral",
       })
     | LitNumber(f) =>
-      TextRun.create'({
+      TextRun.make'({
         text: f->Float.toString,
         style: "NumberLiteral",
       })
     | LitDate(d) =>
-      TextRun.create'({
+      TextRun.make'({
         text: d
         ->Date.fromString
         ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long}),
         style: "DateLiteral",
       })
     | LitString(s) =>
-      TextRun.create'({
+      TextRun.make'({
         text: s,
         style: "StringLiteral",
       })
     | LitEnum(name) =>
-      TextRun.create'({
+      TextRun.make'({
         text: name,
         style: "EnumLiteral",
       })
-    | LitNull => TextRun.create'({text: "Aucune entrée", style: "EmptyLiteral"})
+    | LitNull => TextRun.make'({text: "Aucune entrée", style: "EmptyLiteral"})
     | _ => failwith("invalid user inputs in [litToStyledTextRun]")
     }
   }
 
-  let toFileChild = (userInputs: t): array<file_child> => {
+  let toFileChild = (userInputs: t): array<FileChild.t> => {
     let rec aux = (~elemId=?, ~level: HeadingLevel.t, ~prevInput: t, input: t) => {
+      open FileChild
       switch input {
       | Section({title, items}) =>
         [
-          Paragraph.create'({
+          p'({
             children: [
-              TextRun.create(
+              TextRun.make(
                 switch (prevInput, elemId) {
                 | (Array(_), Some(id)) => `${title} n°${id->Int.toString}`
                 | _ => title
@@ -185,15 +186,15 @@ module Docx = {
         })
         ->Array.flatMap(i => i->aux(~prevInput=input, ~level=getNextHeadingLevel(level)))
       | Field({name, value}) if value->isLiteral => [
-          Paragraph.create'({
-            children: [TextRun.create(`${name} : `), litToStyledTextRun(value)],
+          p'({
+            children: [TextRun.make(`${name} : `), litToStyledTextRun(value)],
           }),
         ]
       | Field({value}) if value->isEmpty => []
       | Field({name, value}) =>
         [
-          Paragraph.create'({
-            children: [TextRun.create(name)],
+          p'({
+            children: [TextRun.make(name)],
             heading: level,
           }),
         ]->Array.concat(value->aux(~prevInput=input, ~level=getNextHeadingLevel(level)))

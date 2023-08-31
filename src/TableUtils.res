@@ -4,47 +4,47 @@ open Styles
 open DSFRColors
 
 // TODO: manage the language
-let litLoggedValueToParagraphChild = (val: LoggedValue.t): paragraph_child => {
+let litLoggedValueToParagraphChild = (val: LoggedValue.t): ParagraphChild.t => {
   switch val {
   | Bool(b) =>
-    TextRun.create'({
+    TextRun.make'({
       text: b ? "oui" : "non",
       style: "BooleanLiteral",
     })
   | Money(m) =>
-    TextRun.create'({
+    TextRun.make'({
       text: `${m->Float.toString}€`,
       style: "NumberLiteral",
     })
   | Decimal(f) =>
-    TextRun.create'({
+    TextRun.make'({
       text: f->Float.toString,
       style: "NumberLiteral",
     })
   | Integer(i) =>
-    TextRun.create'({
+    TextRun.make'({
       text: i->Int.toString,
       style: "NumberLiteral",
     })
   | Date(d) =>
-    TextRun.create'({
+    TextRun.make'({
       text: d
       ->Date.fromString
       ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long}),
       style: "DateLiteral",
     })
   | Duration(d) =>
-    TextRun.create'({
+    TextRun.make'({
       text: d->Utils.durationToString,
       style: "DateLiteral",
     })
   | Enum(_, (name, Unit)) =>
-    TextRun.create'({
+    TextRun.make'({
       text: name,
       style: "EnumLiteral",
     })
   | Array([]) =>
-    TextRun.create'({
+    TextRun.make'({
       text: "∅",
       style: "ArrayLiteral",
     })
@@ -54,11 +54,11 @@ let litLoggedValueToParagraphChild = (val: LoggedValue.t): paragraph_child => {
 
 let getNormalTableCell = (
   ~columnSpan=1,
-  ~borders: TableCell.table_cell_borders_options={},
+  ~borders: TableCell.tableCellBorders={},
   ~bgColor: DSFRColors.t,
   children,
 ): TableCell.t => {
-  TableCell.create({
+  TableCell.make({
     shading: {fill: bgColor->toHex},
     borders,
     columnSpan,
@@ -66,21 +66,21 @@ let getNormalTableCell = (
   })
 }
 
-let getNormalTableCellParagraph = (~alignment: alignment_type=#left, children) => {
-  Paragraph.create'({
-    spacing: {before: 40, after: 40},
+let getNormalTableCellParagraph = (~alignment: AlignmentType.t=#left, children) => {
+  Paragraph.make'({
+    spacing: {before: 40.0, after: 40.0},
     alignment,
     children,
-  })
+  })->Util.Types.ParagraphOrTable.fromParagraph
 }
 
 let getNormalTextTableCell = (
-  ~borders: TableCell.table_cell_borders_options={},
+  ~borders: TableCell.tableCellBorders={},
   ~bgColor: DSFRColors.t,
   ~columnSpan,
   text,
 ): TableCell.t => {
-  [getNormalTableCellParagraph([TextRun.create(text)])]->getNormalTableCell(
+  [getNormalTableCellParagraph([TextRun.make(text)])]->getNormalTableCell(
     ~bgColor,
     ~borders,
     ~columnSpan,
@@ -93,11 +93,14 @@ let getLawHeadingInTableRow = (
 ): option<TableRow.t> => {
   switch pos {
   | Some(pos) =>
-    TableRow.create({
+    TableRow.make({
       children: [
-        TableCell.create({
+        TableCell.make({
           children: [getNormalTableCellParagraph([Utils.getLawHeadingBreadcrumbsLink(pos)])],
-          width: {size: 100.0, _type: #pct},
+          width: {
+            size: Utils.NumPctUni.fromFloat(100.0),
+            type_: #pct,
+          },
           shading: {
             fill: bgColor->toHex,
           },
@@ -117,7 +120,7 @@ let getLawHeadingInTableRow = (
 
 let litLogValueToCell = (
   ~bgColor: DSFRColors.t,
-  ~borders: TableCell.table_cell_borders_options={},
+  ~borders: TableCell.tableCellBorders={},
   val: LoggedValue.t,
 ): TableCell.t => {
   getNormalTableCell(
@@ -129,9 +132,9 @@ let litLogValueToCell = (
 
 let getEmptyCellArray = (~bgColor: DSFRColors.t, length: int): array<TableCell.t> => {
   Array.make(~length, 0)->Array.mapWithIndex((_, idx) => {
-    TableCell.create({
+    TableCell.make({
       children: [],
-      width: {size: 4.0, _type: #pct},
+      width: {size: Utils.NumPctUni.fromFloat(4.0), type_: #pct},
       shading: {fill: bgColor->toHex},
       borders: idx != 0
         ? {
@@ -156,7 +159,7 @@ let litVarDefToTableRow = (
   {name, value, pos}: var_def,
 ): array<TableRow.t> => {
   let lawHeadingOpt = getLawHeadingInTableRow(~bgColor, pos)
-  let borders: TableCell.table_cell_borders_options =
+  let borders: TableCell.tableCellBorders =
     lawHeadingOpt->Option.isSome ? {bottom: {style: #none}} : {}
   let varNameCell = getNormalTextTableCell(
     ~columnSpan=maxDepth - depth,
@@ -164,7 +167,7 @@ let litVarDefToTableRow = (
     ~bgColor,
     name->Utils.lastExn,
   )
-  let varDef = TableRow.create({
+  let varDef = TableRow.make({
     children: depth
     ->getEmptyCellArray(~bgColor)
     ->Array.concat([varNameCell, value->litLogValueToCell(~bgColor, ~borders)]),
@@ -196,7 +199,7 @@ let rec varDefToTableRow = (
   | Struct(structName, fields) => {
       let bgColor = bgColorRef.contents
 
-      let varNameRow = TableRow.create({
+      let varNameRow = TableRow.make({
         children: depth
         ->getEmptyCellArray(~bgColor)
         ->Array.concat([
@@ -206,8 +209,8 @@ let rec varDefToTableRow = (
             ~bgColor,
             [
               getNormalTableCellParagraph([
-                TextRun.create'({text: name->Utils.lastExn, bold: true}),
-                TextRun.create'({
+                TextRun.make'({text: name->Utils.lastExn, bold: true}),
+                TextRun.make'({
                   text: ` (de type ${structName->List.toArray->Array.joinWith(".")})`,
                   italics: true,
                   bold: true,
@@ -239,9 +242,9 @@ let rec varDefToTableRow = (
           }
         })
 
-      let emptyRow = TableRow.create({
+      let emptyRow = TableRow.make({
         children: [
-          TableCell.create({
+          TableCell.make({
             children: [],
             columnSpan: maxDepth,
           }),

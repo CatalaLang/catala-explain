@@ -17,7 +17,8 @@
   "jsx": { "version": 4, "mode": "classic" },
   "bs-dependencies": [
     "@rescript/core",
-    "@catala-lang/rescript-catala"
+    "@catala-lang/rescript-catala",
+	"rescript-docx"
   ],
   "bsc-flags": [
     "-open RescriptCore"

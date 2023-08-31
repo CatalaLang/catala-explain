@@ -5,40 +5,38 @@ let getUserInputDocSection = (
   ~userInputs: JSON.t,
   ~schema: JSON.t,
   ~uiSchema: JSON.t,
-): Document.section => {
+): SectionOptions.t => {
   {
-    children: [
-      Paragraph.create'({text: "Entrées du programme", heading: #Heading1}),
-    ]->Array.concat(
+    children: [FileChild.p'({text: "Entrées du programme", heading: #Heading1})]->Array.concat(
       UserInputs.fromJSON(~json=userInputs, ~schema, ~uiSchema)->UserInputs.Docx.toFileChild,
     ),
   }
 }
 
-let getResultDocSection = (explanationSectionMap: Explanations.sectionMap): Document.section => {
+let getResultDocSection = (explanationSectionMap: Explanations.sectionMap): SectionOptions.t => {
   {
-    children: [
-      Paragraph.create'({text: "Résultats du programme", heading: #Heading1}),
-    ]->Array.concat(explanationSectionMap->Explanations.Docx.outputToFileChilds),
+    children: [FileChild.p'({text: "Résultats du programme", heading: #Heading1})]->Array.concat(
+      explanationSectionMap->Explanations.Docx.outputToFileChilds,
+    ),
   }
 }
 
 let getExplanationsDocSection = (
   explanationSectionMap: Explanations.sectionMap,
-): Document.section => {
+): SectionOptions.t => {
   {
     children: [
-      // Paragraph.create'({text: "Explications", heading: #Heading1}),
-      // Paragraph.create'({
-      //   children: [
-      //     TextRun.create("Vous trouverez ci-dessous les explications détaillées du calcul."),
-      //     TextRun.create("Pour chaque "),
-      //     TextRun.create'({text: "étape", italics: true}),
-      //     TextRun.create(
-      //       " vous trouverez une explication de la règle de calcul utilisée, ainsi que les valeurs des variables utilisées et de potentielles sous-étapes nécessaires.",
-      //     ),
-      //   ],
-      // }),
+      FileChild.p'({text: "Explications", heading: #Heading1}),
+      FileChild.p'({
+        children: [
+          TextRun.make("Vous trouverez ci-dessous les explications détaillées du calcul."),
+          TextRun.make("Pour chaque "),
+          TextRun.make'({text: "étape", italics: true}),
+          TextRun.make(
+            " vous trouverez une explication de la règle de calcul utilisée, ainsi que les valeurs des variables utilisées et de potentielles sous-étapes nécessaires.",
+          ),
+        ],
+      }),
     ]->Array.concat(explanationSectionMap->Explanations.Docx.explanationsToFileChilds),
   }
 }
@@ -56,21 +54,21 @@ let version = "0.1.0"
 
 let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntime.event>) => {
   let explanationSectionMap = events->Explanations.fromEvents
-  Document.create({
+  Document.make({
     title: opts.title->Option.getUnsafe,
     creator: opts.creator->Option.getUnsafe,
     description: opts.description->Option.getUnsafe,
     sections: [
       {
         headers: {
-          default: Header.create({
+          default: Headers.Header.make({
             children: [
-              Paragraph.create'({
+              FileChild.p'({
                 alignment: #right,
                 children: [
-                  TextRun.create(`catala-explain v${version}`),
-                  TextRun.create(" - "),
-                  TextRun.create(
+                  TextRun.make(`catala-explain v${version}`),
+                  TextRun.make(" - "),
+                  TextRun.make(
                     `${Date.now()
                       ->Date.fromTime
                       ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #short})}`,
@@ -81,16 +79,16 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
           }),
         },
         footers: {
-          default: Footer.create({
+          default: Headers.Footer.make({
             children: [
-              Paragraph.create'({
+              FileChild.p'({
                 alignment: #right,
                 children: [
-                  TextRun.create'({
+                  TextRun.make'({
                     children: [
-                      TextRun.Children.pageNumber(PageNumber.current),
-                      TextRun.Children.string(" / "),
-                      TextRun.Children.pageNumber(PageNumber.totalPages),
+                      TextRun.pageNumber(#CURRENT),
+                      TextRun.string(" / "),
+                      TextRun.pageNumber(#TOTAL_PAGES),
                     ],
                   }),
                 ],
@@ -99,27 +97,27 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
           }),
         },
         children: [
-          // Paragraph.create'({
-          //   text: opts.title->Option.getWithDefault("Explication individuelle du calcul"),
-          //   heading: #Title,
-          //   alignment: #center,
-          // }),
-          // Paragraph.create'({
-          //   text: opts.description->Option.getUnsafe,
-          //   heading: #Heading2,
-          //   alignment: #center,
-          // }),
-          // Paragraph.create'({
-          //   text: `Généré le ${Date.now()
-          //     ->Date.fromTime
-          //     ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long})}`,
-          //   heading: #Heading4,
-          //   alignment: #center,
-          // }),
+          FileChild.p'({
+            text: opts.title->Option.getWithDefault("Explication individuelle du calcul"),
+            heading: #Title,
+            alignment: #center,
+          }),
+          FileChild.p'({
+            text: opts.description->Option.getUnsafe,
+            heading: #Heading2,
+            alignment: #center,
+          }),
+          FileChild.p'({
+            text: `Généré le ${Date.now()
+              ->Date.fromTime
+              ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long})}`,
+            heading: #Heading4,
+            alignment: #center,
+          }),
         ],
       },
-      // getUserInputDocSection(~userInputs, ~schema=opts.schema, ~uiSchema=opts.uiSchema),
-      // explanationSectionMap->getResultDocSection,
+      getUserInputDocSection(~userInputs, ~schema=opts.schema, ~uiSchema=opts.uiSchema),
+      explanationSectionMap->getResultDocSection,
       explanationSectionMap->getExplanationsDocSection,
     ],
     styles: {
@@ -127,7 +125,7 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
       characterStyles: Styles.characterStyles,
     },
   })
-  ->Packer.toBlob
+  ->Docx.Packer.toBlob
   ->thenResolve(blob => {
     FileSaver.saveAs(blob, `${opts.filename}.docx`)
   })
