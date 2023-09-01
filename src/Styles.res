@@ -38,6 +38,7 @@ module DSFRColors = {
 }
 
 let marianneFont = Font.fromString("Marianne")
+let posUniversalMeasure = Types.NumberOrPositiveUniversalMeasure.fromPositiveUniversalMeasure
 
 let default: StylesOptions.defaultStylesOptions = {
   let baseHeadingStyle: StylesOptions.baseCharacterStyleOptions = {
@@ -53,43 +54,43 @@ let default: StylesOptions.defaultStylesOptions = {
       run: {
         font: marianneFont,
         color: "3a3a3a",
-        size: Types.NumberOrPositiveUniversalMeasure.fromString("8pt"),
+        size: posUniversalMeasure("8pt"),
       },
     },
     heading1: {
       run: {
         ...baseHeadingStyleRun,
-        size: Types.NumberOrPositiveUniversalMeasure.fromString("28pt"),
+        size: posUniversalMeasure("28pt"),
       },
     },
     heading2: {
       run: {
         ...baseHeadingStyleRun,
-        size: Types.NumberOrPositiveUniversalMeasure.fromString("24pt"),
+        size: posUniversalMeasure("24pt"),
       },
     },
     heading3: {
       run: {
         ...baseHeadingStyleRun,
-        size: Types.NumberOrPositiveUniversalMeasure.fromString("22pt"),
+        size: posUniversalMeasure("22pt"),
       },
     },
     heading4: {
       run: {
         ...baseHeadingStyleRun,
-        size: Types.NumberOrPositiveUniversalMeasure.fromString("18pt"),
+        size: posUniversalMeasure("18pt"),
       },
     },
     heading5: {
       run: {
         ...baseHeadingStyleRun,
-        size: Types.NumberOrPositiveUniversalMeasure.fromString("16pt"),
+        size: posUniversalMeasure("16pt"),
       },
     },
     heading6: {
       run: {
         ...baseHeadingStyleRun,
-        size: Types.NumberOrPositiveUniversalMeasure.fromString("14pt"),
+        size: posUniversalMeasure("14pt"),
       },
     },
     hyperlink: {
@@ -121,7 +122,7 @@ let characterStyles: array<StylesOptions.characterStyleOptions> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      size: Types.NumberOrPositiveUniversalMeasure.fromString("10pt"),
+      size: posUniversalMeasure("10pt"),
     },
   },
   {
@@ -145,7 +146,7 @@ let characterStyles: array<StylesOptions.characterStyleOptions> = [
     run: {
       font: marianneFont,
       bold: true,
-      size: Types.NumberOrPositiveUniversalMeasure.fromString("8pt"),
+      size: posUniversalMeasure("8pt"),
       color: "161616",
     },
   },
@@ -240,7 +241,7 @@ let characterStyles: array<StylesOptions.characterStyleOptions> = [
     next: "Normal",
     quickFormat: true,
     run: {
-      size: Types.NumberOrPositiveUniversalMeasure.fromString("8pt"),
+      size: posUniversalMeasure("8pt"),
     },
   },
 ]
