@@ -14,7 +14,7 @@ type rec section = {
   outputs: array<var_def>,
   explanations: array<explanation>,
 }
-and explanation = Def(var_def) | Ref(SectionId.t)
+and explanation = Def(var_def) | Ref({id: SectionId.t, title: string})
 
 type sectionMap = Map.t<SectionId.t, section>
 
@@ -32,6 +32,14 @@ type parseCtx = {
   currentId: SectionId.t,
 }
 
+let getTitle = (sections: sectionMap, id: SectionId.t): string => {
+  switch sections->Map.get(id) {
+  | Some({title}) => title
+  | None => // TODO: what should we do here?
+    "Unknown section"
+  }
+}
+
 let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explanation> => {
   let makeNewSection = (name, inputs, body, outputs) => {
     let id = SectionId.fresh()
@@ -45,13 +53,14 @@ let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explana
       explanations: body->List.toArray->parseExplanations({...ctx, currentId: id}),
     }
     ctx.sections->Map.set(id, section)
-    Ref(id)
+    Ref({id, title})
   }
 
   events->Array.flatMap(event => {
     switch event {
     | VarComputation({fun_calls: Some(calls)} as varDef) =>
       calls
+      ->List.reverse
       ->List.map(({fun_name, fun_inputs, body, output}) => {
         makeNewSection(fun_name, fun_inputs, body, [output])
       })
@@ -59,7 +68,7 @@ let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explana
       ->Array.concat([Def(varDef)])
     | VarComputation(varDef) => [Def(varDef)]
     | SubScopeCall({sname, inputs, sbody}) => {
-        let outputs = sbody->List.toArray->Array.reverse->getOutputs
+        let outputs = sbody->List.toArray->getOutputs
         [makeNewSection(sname, inputs, sbody, outputs)]
       }
     | FunCall({fun_name, fun_inputs, body, output}) => [
@@ -70,7 +79,7 @@ let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explana
 }
 
 let parseRoot = (ctx: parseCtx, events: array<event>): section => {
-  let explanations = events->Array.reverse
+  let explanations = events
   let outputs = explanations->getOutputs
   // A program should always have an output
   let firstOutput = outputs->Array.get(0)->Option.getExn
@@ -95,7 +104,7 @@ let fromEvents = (events: array<event>): sectionMap => {
 module Docx = {
   open Docx
 
-  let linkToSection = (~textRunOptions: TextRun.options={}, id: SectionId.t): array<
+  let linkToSection = (~textRunOptions: TextRun.options={}, id: SectionId.t, title: string): array<
     Docx.ParagraphChild.t,
   > => {
     let bookmarkId = `section-${id->Int.toString}`
@@ -104,7 +113,7 @@ module Docx = {
     [
       InternalHyperlink.make({
         anchor: bookmarkId,
-        children: [run(~style="Hyperlink", `n°${id->Int.toString}`)],
+        children: [run(~style="Hyperlink", title)],
       }),
       run(` (p. `),
       PageReference.make(bookmarkId),
@@ -140,6 +149,17 @@ module Docx = {
     // NOTE(@EmileRolley): I assume here that there are only one output for one program
     let output = outputs->Array.get(0)
     let nbRefs = refs->Array.length
+    let stepParagraphs = refs->Array.mapWithIndex((expl, i) => {
+      switch expl {
+      | Ref({id, title}) =>
+        p'({
+          children: [TextRun.make(`${(i + 1)->Int.toString}. `)]->Array.concat(
+            linkToSection(id, title),
+          ),
+        })
+      | _ => p("")
+      }
+    })
     [
       p'({
         children: output
@@ -159,37 +179,14 @@ module Docx = {
         ])
         ->Option.getWithDefault([]),
       }),
-      p'({
-        children: [
-          if nbRefs == 1 {
-            TextRun.make(`La valeur a été calculée à partir de l'étape de calcul `)
-          } else {
-            TextRun.make(`La valeur a été calculée à partir des étapes de calculs `)
-          },
-        ]->Array.concat(
-          refs
-          ->Array.mapWithIndex((expl, i) => {
-            let isLast = i == nbRefs - 1
-            switch expl {
-            | Ref(id) =>
-              linkToSection(id)->Array.concat([
-                if isLast {
-                  TextRun.make(".")
-                } else {
-                  TextRun.make(", ")
-                },
-              ])
-            | _ => []
-            }
-          })
-          ->Array.flat,
-        ),
-      }),
-    ]
+      p(""),
+      p(`La valeur a été calculée à partir des étapes de calculs : `),
+    ]->Array.concat(stepParagraphs)
   }
 
   let getTable = (
     ~id: SectionId.t,
+    ~title: string,
     ~headingText: string,
     ~maxDepth: int,
     ~bgColor: DSFRColors.t,
@@ -221,7 +218,7 @@ module Docx = {
                       ...textHeadingStyle,
                       text: headingText ++ " ",
                     }),
-                  ]->Array.concat(id->linkToSection(~textRunOptions=textHeadingStyle)),
+                  ]->Array.concat(linkToSection(~textRunOptions=textHeadingStyle, id, title)),
                 })->DocxTypes.ParagraphOrTable.fromParagraph,
               ],
             }),
@@ -231,7 +228,7 @@ module Docx = {
     })
   }
 
-  let getInputsTable = (id: SectionId.t, inputs: array<var_def>) => {
+  let getInputsTable = (id: SectionId.t, title: string, inputs: array<var_def>) => {
     let headingText =
       inputs->Array.length > 1
         ? "Entrées utilisées pour l'étape de calcul"
@@ -240,10 +237,10 @@ module Docx = {
     let bgColor = #blue_france_925
     let contentRows = inputs->TableUtils.getTableRows(~bgColorRef=ref(bgColor), ~maxDepth)
 
-    getTable(~id, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
+    getTable(~id, ~title, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
   }
 
-  let getOutputsTable = (id: SectionId.t, outputs: array<var_def>) => {
+  let getOutputsTable = (id: SectionId.t, title: string, outputs: array<var_def>) => {
     let headingText =
       outputs->Array.length > 1
         ? "Valeurs calculées dans l'étape de calcul"
@@ -252,10 +249,10 @@ module Docx = {
     let bgColor = #red_marianne_925
     let contentRows = outputs->TableUtils.getTableRows(~bgColorRef=ref(bgColor), ~maxDepth)
 
-    getTable(~id, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
+    getTable(~id, ~title, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
   }
 
-  let getExplanationsTable = (id: SectionId.t, explanations: array<explanation>) => {
+  let getExplanationsTable = (id: SectionId.t, title: string, explanations: array<explanation>) => {
     let headingText =
       explanations->Array.length > 1
         ? "Explications pour l'étape de calcul"
@@ -280,14 +277,14 @@ module Docx = {
         } else {
           varDef->TableUtils.varDefToTableRow(~maxDepth, ~bgColorRef)
         }
-      | Ref(id) => [
+      | Ref({id, title}) => [
           TableRow.make({
             children: [
               TableUtils.getNormalTableCell(
                 ~bgColor=bgColorRef.contents,
                 [
                   TableUtils.getNormalTableCellParagraph(
-                    [TextRun.make("Calcul de l'étape ")]->Array.concat(linkToSection(id)),
+                    [TextRun.make("Calcul de l'étape ")]->Array.concat(linkToSection(id, title)),
                   ),
                 ],
               ),
@@ -297,7 +294,7 @@ module Docx = {
       }
     })
 
-    getTable(~id, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
+    getTable(~id, ~title, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
   }
 
   let explanationsToFileChilds = (explanationSectionMap: sectionMap): array<FileChild.t> => {
@@ -317,19 +314,20 @@ module Docx = {
           }),
           FileChild.p'({
             children: if parent != SectionId.root {
+              let parentTitle = explanationSectionMap->getTitle(parent)
               [TextRun.make("Cette étape de calcul intervient dans l'étape ")]->Array.concat(
-                linkToSection(parent),
+                linkToSection(parent, parentTitle),
               )
             } else {
               []
             },
           }),
         ]->Array.concat([
-          FileChild.fromTable(getInputsTable(id, inputs)),
+          FileChild.fromTable(getInputsTable(id, title, inputs)),
           FileChild.p(""),
-          FileChild.fromTable(getOutputsTable(id, outputs)),
+          FileChild.fromTable(getOutputsTable(id, title, outputs)),
           FileChild.p(""),
-          FileChild.fromTable(getExplanationsTable(id, explanations)),
+          FileChild.fromTable(getExplanationsTable(id, title, explanations)),
         ])
       }
     })

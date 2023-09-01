@@ -20,7 +20,7 @@ type rec section = {
   outputs: array<CatalaRuntime.var_def>,
   explanations: array<explanation>,
 }
-and explanation = Def(CatalaRuntime.var_def) | Ref(SectionId.t)
+and explanation = Def(CatalaRuntime.var_def) | Ref({id: SectionId.t, title: string})
 
 type sectionMap = RescriptCore.Map.t<SectionId.t, section>
 
