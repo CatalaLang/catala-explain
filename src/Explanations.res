@@ -48,15 +48,23 @@ let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explana
     Ref(id)
   }
 
-  events->Array.map(event => {
+  events->Array.flatMap(event => {
     switch event {
-    | VarComputation(var_def) => Def(var_def)
+    | VarComputation({fun_calls: Some(calls)} as varDef) =>
+      calls
+      ->List.map(({fun_name, fun_inputs, body, output}) => {
+        makeNewSection(fun_name, fun_inputs, body, [output])
+      })
+      ->List.toArray
+      ->Array.concat([Def(varDef)])
+    | VarComputation(varDef) => [Def(varDef)]
     | SubScopeCall({sname, inputs, sbody}) => {
         let outputs = sbody->List.toArray->Array.reverse->getOutputs
-        makeNewSection(sname, inputs, sbody, outputs)
+        [makeNewSection(sname, inputs, sbody, outputs)]
       }
-    | FunCall({fun_name, fun_inputs, body, output}) =>
-      makeNewSection(fun_name, fun_inputs, body, [output])
+    | FunCall({fun_name, fun_inputs, body, output}) => [
+        makeNewSection(fun_name, fun_inputs, body, [output]),
+      ]
     }
   })
 }
