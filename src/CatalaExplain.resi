@@ -12,6 +12,14 @@ type options = {
 /**
 * Generates a .DOCX file from a list of events.
 *
-* @param events The list of events to generate the .DOCX file from.
+* @param userInputs The user inputs use to compute the events.
+* @param events The list of events to show in the document.
+* @param selectedOutput The output to show as the result of the computation.
+* @param opts The options for the generation.
 */
-let generate: (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntime.event>) => unit
+let generate: (
+  ~userInputs: JSON.t,
+  ~events: array<CatalaRuntime.event>,
+  ~selectedOutput: CatalaRuntime.information,
+  ~opts: options,
+) => unit

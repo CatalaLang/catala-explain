@@ -1,39 +1,42 @@
 {
-	"name": "@catala-lang/catala-explain",
-	"version": "0.1.1",
-	"description": "A module for explicability from the trace of a catala program",
-	"scripts": {
-		"clean": "rescript clean",
-		"build": "rescript build -with-deps",
-		"watch": "yarn run build -w"
-	},
-	"main": "index.js",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/CatalaLang/catala-explain.git"
-	},
-	"author": "Emile Rolley <emile.rolley@tuta.io>",
-	"license": "Apache-2.0",
-	"bugs": {
-		"url": "https://github.com/CatalaLang/catala-explain/issues"
-	},
-	"homepage": "https://github.com/CatalaLang/catala-explain#readme",
-	"keywords": [
-		"ReScript",
-		"catala",
-		"explain",
-		"trace"
-	],
-	"devDependencies": {
-		"@catala-lang/french-law": "^0.8.3-b.3",
-		"@catala-lang/rescript-catala": "^0.8.1-b.0",
-		"@rescript/core": "^0.3.1",
-		"file-saver": "^2.0.5",
-		"reanalyze": "^2.23.0",
-		"rescript": "^10.1.4",
-		"rescript-docx": "^0.1.2"
-	},
-	"dependencies": {
-		"docx": "^8.0.4"
-	}
+  "name": "@catala-lang/catala-explain",
+  "version": "0.1.1",
+  "description": "A module for explicability from the trace of a catala program",
+  "scripts": {
+    "clean": "rescript clean",
+    "build": "rescript build -with-deps",
+    "watch": "yarn run build -w"
+  },
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CatalaLang/catala-explain.git"
+  },
+  "author": "Emile Rolley <emile.rolley@tuta.io>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/CatalaLang/catala-explain/issues"
+  },
+  "homepage": "https://github.com/CatalaLang/catala-explain#readme",
+  "keywords": [
+    "rescript",
+    "catala",
+    "explain",
+    "trace"
+  ],
+  "devDependencies": {
+    "@catala-lang/french-law": "^0.8.3-b.3",
+    "@catala-lang/rescript-catala": "^0.8.1-b.0",
+    "@rescript/core": "^0.3.1",
+    "file-saver": "^2.0.5",
+    "reanalyze": "^2.23.0",
+    "rescript": "^10.1.4",
+    "rescript-docx": "^0.1.2"
+  },
+  "dependencies": {
+    "docx": "^8.0.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

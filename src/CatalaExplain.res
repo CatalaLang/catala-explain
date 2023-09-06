@@ -1,11 +1,7 @@
 open Docx
 open Promise
 
-let getUserInputDocSection = (
-  ~userInputs: JSON.t,
-  ~schema: JSON.t,
-  ~uiSchema: JSON.t,
-): SectionOptions.t => {
+let getUserInputDocSection = (~userInputs, ~schema, ~uiSchema): SectionOptions.t => {
   {
     children: [FileChild.p'({text: "Entrées du programme", heading: #Heading1})]->Array.concat(
       UserInputs.fromJSON(~json=userInputs, ~schema, ~uiSchema)->UserInputs.Docx.toFileChild,
@@ -13,10 +9,10 @@ let getUserInputDocSection = (
   }
 }
 
-let getResultDocSection = (explanationSectionMap: Explanations.sectionMap): SectionOptions.t => {
+let getResultDocSection = (~selectedOutput, explanationSectionMap): SectionOptions.t => {
   {
     children: [FileChild.p'({text: "Résultats du programme", heading: #Heading1})]->Array.concat(
-      explanationSectionMap->Explanations.Docx.outputToFileChilds,
+      explanationSectionMap->Explanations.Docx.outputToFileChilds(~selectedOutput),
     ),
   }
 }
@@ -52,12 +48,31 @@ type options = {
 
 let version = "0.1.0"
 
-let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntime.event>) => {
+let generate = (~userInputs, ~events, ~selectedOutput, ~opts) => {
   let explanationSectionMap = events->Explanations.fromEvents
   Document.make({
     title: opts.title->Option.getUnsafe,
     creator: opts.creator->Option.getUnsafe,
     description: opts.description->Option.getUnsafe,
+    styles: {
+      default: Styles.default,
+      characterStyles: Styles.characterStyles,
+    },
+    numbering: {
+      config: [
+        {
+          reference: "decimal",
+          levels: [
+            {
+              level: 0,
+              format: #decimal,
+              text: "%1.",
+              alignment: #right,
+            },
+          ],
+        },
+      ],
+    },
     sections: [
       {
         headers: {
@@ -107,23 +122,12 @@ let generate = (~opts: options, ~userInputs: JSON.t, ~events: array<CatalaRuntim
             heading: #Heading2,
             alignment: #center,
           }),
-          FileChild.p'({
-            text: `Généré le ${Date.now()
-              ->Date.fromTime
-              ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long})}`,
-            heading: #Heading4,
-            alignment: #center,
-          }),
         ],
       },
       getUserInputDocSection(~userInputs, ~schema=opts.schema, ~uiSchema=opts.uiSchema),
-      explanationSectionMap->getResultDocSection,
+      explanationSectionMap->getResultDocSection(~selectedOutput),
       explanationSectionMap->getExplanationsDocSection,
     ],
-    styles: {
-      default: Styles.default,
-      characterStyles: Styles.characterStyles,
-    },
   })
   ->Docx.Packer.toBlob
   ->thenResolve(blob => {

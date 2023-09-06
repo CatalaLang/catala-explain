@@ -133,7 +133,9 @@ module Docx = {
   }
 
   @raises(Error.t)
-  let outputToFileChilds = (explanationSectionMap: sectionMap): array<FileChild.t> => {
+  let outputToFileChilds = (~selectedOutput: information, explanationSectionMap: sectionMap): array<
+    FileChild.t,
+  > => {
     open FileChild
 
     let {outputs, explanations} =
@@ -146,16 +148,16 @@ module Docx = {
       | _ => false
       }
     })
-    // NOTE(@EmileRolley): I assume here that there are only one output for one program
-    let output = outputs->Array.get(0)
-    let nbRefs = refs->Array.length
+    Console.log2("outputs", outputs)
+    let output = outputs->Array.find(({name}) => name == selectedOutput)
     let stepParagraphs = refs->Array.mapWithIndex((expl, i) => {
       switch expl {
       | Ref({id, title}) =>
         p'({
-          children: [TextRun.make(`${(i + 1)->Int.toString}. `)]->Array.concat(
-            linkToSection(id, title),
-          ),
+          numbering: {level: 0, reference: "decimal", instance: i->Int.toFloat},
+          children: /* [TextRun.make(`${(i + 1)->Int.toString}. `)]->Array.concat( */
+          linkToSection(id, title),
+          // ),
         })
       | _ => p("")
       }
@@ -229,10 +231,7 @@ module Docx = {
   }
 
   let getInputsTable = (id: SectionId.t, title: string, inputs: array<var_def>) => {
-    let headingText =
-      inputs->Array.length > 1
-        ? "Entrées utilisées pour l'étape de calcul"
-        : "Entrée utilisée pour l'étape de calcul"
+    let headingText = "Entrées de l'étape de calcul"
     let maxDepth = inputs->Utils.getMaxDepth
     let bgColor = #blue_france_925
     let contentRows = inputs->TableUtils.getTableRows(~bgColorRef=ref(bgColor), ~maxDepth)
@@ -241,10 +240,7 @@ module Docx = {
   }
 
   let getOutputsTable = (id: SectionId.t, title: string, outputs: array<var_def>) => {
-    let headingText =
-      outputs->Array.length > 1
-        ? "Valeurs calculées dans l'étape de calcul"
-        : "Valeur calculée dans l'étape de calcul"
+    let headingText = "Résultats de l'étape de calcul"
     let maxDepth = outputs->Utils.getMaxDepth
     let bgColor = #red_marianne_925
     let contentRows = outputs->TableUtils.getTableRows(~bgColorRef=ref(bgColor), ~maxDepth)
@@ -253,10 +249,7 @@ module Docx = {
   }
 
   let getExplanationsTable = (id: SectionId.t, title: string, explanations: array<explanation>) => {
-    let headingText =
-      explanations->Array.length > 1
-        ? "Explications pour l'étape de calcul"
-        : "Explication pour l'étape de calcul"
+    let headingText = "Détails de l'étape de calcul"
     let maxDepth =
       explanations
       ->Array.filterMap((expl: explanation) =>
