@@ -1,11 +1,17 @@
 open Docx
 open Promise
 
-let getUserInputDocSection = (~userInputs, ~schema, ~uiSchema): SectionOptions.t => {
+let getUserInputDocSection = (~userInputs, ~schema, ~uiSchema, ~keysToIgnore): SectionOptions.t => {
   {
-    children: [FileChild.p'({text: "Entrées du programme", heading: #Heading1})]->Array.concat(
-      UserInputs.fromJSON(~json=userInputs, ~schema, ~uiSchema)->UserInputs.Docx.toFileChild,
-    ),
+    children: [
+      FileChild.p'({text: "Entrées du programme", heading: #Heading1}),
+      UserInputs.parseVarDefs(
+        ~json=userInputs,
+        ~schema,
+        ~uiSchema,
+        ~keysToIgnore,
+      )->UserInputs.toTable,
+    ],
   }
 }
 
@@ -44,11 +50,13 @@ type options = {
   filename: string,
   schema: JSON.t,
   uiSchema: JSON.t,
+  keysToIgnore: array<string>,
+  selectedOutput: CatalaRuntime.information,
 }
 
 let version = "0.1.0"
 
-let generate = (~userInputs, ~events, ~selectedOutput, ~opts) => {
+let generate = (~userInputs, ~events, ~opts) => {
   let explanationSectionMap = events->Explanations.fromEvents
   Document.make({
     title: opts.title->Option.getUnsafe,
@@ -124,8 +132,13 @@ let generate = (~userInputs, ~events, ~selectedOutput, ~opts) => {
           }),
         ],
       },
-      getUserInputDocSection(~userInputs, ~schema=opts.schema, ~uiSchema=opts.uiSchema),
-      explanationSectionMap->getResultDocSection(~selectedOutput),
+      getUserInputDocSection(
+        ~userInputs,
+        ~schema=opts.schema,
+        ~uiSchema=opts.uiSchema,
+        ~keysToIgnore=opts.keysToIgnore,
+      ),
+      explanationSectionMap->getResultDocSection(~selectedOutput=opts.selectedOutput),
       explanationSectionMap->getExplanationsDocSection,
     ],
   })
