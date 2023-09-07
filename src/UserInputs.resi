@@ -1,25 +1,11 @@
 /* This module provides functions to parse user input into a [Docx.fileChild] array. */
 
-type rec t =
-  | Section({title: string, items: t})
-  | Fields(array<t>)
-  | Field({
-      name: string,
-      value: t,
-      // 'ui:tabLabel' in the uiSchema, if present, will be used as element
-      // name for array items.
-      tabLabel: option<string>,
-    })
-  | Array(array<t>)
-  | LitEnum(string)
-  | LitDate(string)
-  | LitString(string)
-  | LitNumber(float)
-  | LitBool(bool)
-  | LitNull
+/** TODO: add documentation */
+let parseVarDefs: (
+  ~json: JSON.t,
+  ~schema: JSON.t,
+  ~uiSchema: JSON.t,
+  ~keysToIgnore: array<string>,
+) => array<CatalaRuntime.var_def>
 
-let fromJSON: (~json: JSON.t, ~schema: JSON.t, ~uiSchema: JSON.t) => t
-
-module Docx: {
-  let toFileChild: t => array<Docx.FileChild.t>
-}
+let toTable: array<CatalaRuntime.var_def> => Docx.FileChild.t

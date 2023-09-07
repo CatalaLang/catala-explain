@@ -210,11 +210,15 @@ let rec varDefToTableRow = (
             [
               getNormalTableCellParagraph([
                 TextRun.make'({text: name->Utils.lastExn, bold: true}),
-                TextRun.make'({
-                  text: ` (de type ${structName->List.toArray->Array.joinWith(".")})`,
-                  italics: true,
-                  bold: true,
-                }),
+                if structName == list{} {
+                  TextRun.make("")
+                } else {
+                  TextRun.make'({
+                    text: ` (de type ${structName->List.toArray->Array.joinWith(".")})`,
+                    italics: true,
+                    bold: true,
+                  })
+                },
               ]),
             ],
           ),
@@ -292,5 +296,32 @@ let getTableRows = (
     } else {
       varDef->varDefToTableRow(~maxDepth, ~bgColorRef)
     }
+  })
+}
+
+let getTable = (
+  ~headingParagraph: Paragraph.t,
+  ~maxDepth: int,
+  ~bgColor: DSFRColors.t,
+  ~contentRows: array<TableRow.t>,
+): Table.t => {
+  Table.make({
+    columnWidths: Array.make(~length=maxDepth - 1, 4.0)->Array.concat([65.0, 25.0]),
+    width: {size: Utils.NumPctUni.fromFloat(100.0), type_: #pct},
+    alignment: #center,
+    borders: {
+      bottom: {style: #single},
+    },
+    rows: [
+      TableRow.make({
+        tableHeader: true,
+        children: [
+          TableCell.make({
+            shading: {fill: bgColor->toHex},
+            children: [headingParagraph->Util.Types.ParagraphOrTable.fromParagraph],
+          }),
+        ],
+      }),
+    ]->Array.concat(contentRows),
   })
 }

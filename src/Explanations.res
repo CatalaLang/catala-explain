@@ -2,8 +2,6 @@ open CatalaRuntime
 open Styles
 open DSFRColors
 
-module DocxTypes = Docx.Util.Types
-
 module SectionId = UId.Int.Make()
 
 type rec section = {
@@ -148,7 +146,6 @@ module Docx = {
       | _ => false
       }
     })
-    Console.log2("outputs", outputs)
     let output = outputs->Array.find(({name}) => name == selectedOutput)
     let stepParagraphs = refs->Array.mapWithIndex((expl, i) => {
       switch expl {
@@ -186,48 +183,26 @@ module Docx = {
     ]->Array.concat(stepParagraphs)
   }
 
-  let getTable = (
-    ~id: SectionId.t,
-    ~title: string,
-    ~headingText: string,
-    ~maxDepth: int,
-    ~bgColor: DSFRColors.t,
-    ~contentRows: array<TableRow.t>,
-  ): Table.t => {
+  let getTableWithLinkToSection = (
+    ~id,
+    ~title,
+    ~headingText,
+    ~bgColor,
+    ~maxDepth,
+    ~contentRows,
+  ) => {
     let textHeadingStyle: TextRun.options = {bold: true, size: "10pt"}
-    // let innerBorder = {style: #single, color: #grey_main_525->toHex, size: 0.25}
-
-    Table.make({
-      columnWidths: Array.make(~length=maxDepth - 1, 4.0)->Array.concat([65.0, 25.0]),
-      width: {size: Utils.NumPctUni.fromFloat(100.0), type_: #pct},
-      alignment: #center,
-      borders: {
-        bottom: {style: #single},
-        // insideHorizontal: innerBorder,
-        // insideVertical: innerBorder,
-      },
-      rows: [
-        TableRow.make({
-          tableHeader: true,
-          children: [
-            TableCell.make({
-              shading: {fill: bgColor->toHex},
-              children: [
-                Paragraph.make'({
-                  spacing: {before: 80.0, after: 80.0},
-                  children: [
-                    TextRun.make'({
-                      ...textHeadingStyle,
-                      text: headingText ++ " ",
-                    }),
-                  ]->Array.concat(linkToSection(~textRunOptions=textHeadingStyle, id, title)),
-                })->DocxTypes.ParagraphOrTable.fromParagraph,
-              ],
-            }),
-          ],
+    let headingParagraph = Paragraph.make'({
+      spacing: {before: 80.0, after: 80.0},
+      children: [
+        TextRun.make'({
+          ...textHeadingStyle,
+          text: headingText ++ " ",
         }),
-      ]->Array.concat(contentRows),
+      ]->Array.concat(linkToSection(~textRunOptions=textHeadingStyle, id, title)),
     })
+
+    TableUtils.getTable(~bgColor, ~maxDepth, ~contentRows, ~headingParagraph)
   }
 
   let getInputsTable = (id: SectionId.t, title: string, inputs: array<var_def>) => {
@@ -236,7 +211,7 @@ module Docx = {
     let bgColor = #blue_france_925
     let contentRows = inputs->TableUtils.getTableRows(~bgColorRef=ref(bgColor), ~maxDepth)
 
-    getTable(~id, ~title, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
+    getTableWithLinkToSection(~id, ~title, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
   }
 
   let getOutputsTable = (id: SectionId.t, title: string, outputs: array<var_def>) => {
@@ -245,7 +220,7 @@ module Docx = {
     let bgColor = #red_marianne_925
     let contentRows = outputs->TableUtils.getTableRows(~bgColorRef=ref(bgColor), ~maxDepth)
 
-    getTable(~id, ~title, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
+    getTableWithLinkToSection(~id, ~title, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
   }
 
   let getExplanationsTable = (id: SectionId.t, title: string, explanations: array<explanation>) => {
@@ -287,7 +262,7 @@ module Docx = {
       }
     })
 
-    getTable(~id, ~title, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
+    getTableWithLinkToSection(~id, ~title, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
   }
 
   let explanationsToFileChilds = (explanationSectionMap: sectionMap): array<FileChild.t> => {
