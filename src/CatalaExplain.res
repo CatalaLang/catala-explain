@@ -49,7 +49,7 @@ type options = {
   selectedOutput: CatalaRuntime.information,
 }
 
-let version = "0.1.0"
+let version = "0.1.1"
 
 let generate = (~userInputs, ~events, ~opts) => {
   let explanationSectionMap = events->Explanations.fromEvents

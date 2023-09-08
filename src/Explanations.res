@@ -4,15 +4,25 @@ open DSFRColors
 
 module SectionId = UId.Int.Make()
 
+/**
+  A section is a step of the computation, with a title, a list of inputs and
+  outputs, and a list of explanations.
+
+  Each sub-scope call or function call is considered a section. The top-level
+  scope is also a section (with the [id == SectionId.root]).
+
+  An explanation is either a definition of a variable, or a reference to another
+  section.
+*/
 type rec section = {
   id: SectionId.t,
   parent: SectionId.t,
-  title: string,
+  scopeName: information,
   inputs: array<var_def>,
   outputs: array<var_def>,
   explanations: array<explanation>,
 }
-and explanation = Def(var_def) | Ref({id: SectionId.t, title: string})
+and explanation = Def(var_def) | Ref({id: SectionId.t, scopeName: information})
 
 type sectionMap = Map.t<SectionId.t, section>
 
@@ -30,28 +40,26 @@ type parseCtx = {
   currentId: SectionId.t,
 }
 
-let getTitle = (sections: sectionMap, id: SectionId.t): string => {
+let getScopeName = (sections: sectionMap, id: SectionId.t): information => {
   switch sections->Map.get(id) {
-  | Some({title}) => title
-  | None => // TODO: what should we do here?
-    "Unknown section"
+  | Some({scopeName}) => scopeName
+  | None => list{}
   }
 }
 
 let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explanation> => {
   let makeNewSection = (name, inputs, body, outputs) => {
     let id = SectionId.fresh()
-    let title = Utils.getSectionTitle(name)
     let section = {
       id,
       parent: ctx.currentId,
-      title,
+      scopeName: name,
       inputs: List.toArray(inputs),
       outputs,
       explanations: body->List.toArray->parseExplanations({...ctx, currentId: id}),
     }
     ctx.sections->Map.set(id, section)
-    Ref({id, title})
+    Ref({id, scopeName: name})
   }
 
   events->Array.flatMap(event => {
@@ -83,7 +91,7 @@ let parseRoot = (ctx: parseCtx, events: array<event>): section => {
   let firstOutput = outputs->Array.get(0)->Option.getExn
   {
     id: SectionId.root,
-    title: firstOutput.name->Utils.getSectionTitle,
+    scopeName: firstOutput.name,
     parent: SectionId.root,
     inputs: [],
     outputs,
@@ -102,16 +110,20 @@ let fromEvents = (events: array<event>): sectionMap => {
 module Docx = {
   open Docx
 
-  let linkToSection = (~textRunOptions: TextRun.options={}, id: SectionId.t, title: string): array<
+  let linkToSection = (~size: option<int>=None, id: SectionId.t, scopeName: information): array<
     Docx.ParagraphChild.t,
   > => {
     let bookmarkId = `section-${id->Int.toString}`
-    let run = (~style="", text) => TextRun.make'({...textRunOptions, style, text})
+    let run = text =>
+      switch size {
+      | Some(n) => TextRun.make'({text, size: `${n->Int.toString}pt`})
+      | None => TextRun.make(text)
+      }
 
     [
       InternalHyperlink.make({
         anchor: bookmarkId,
-        children: [run(~style="Hyperlink", title)],
+        children: scopeName->Utils.getSectionTitle(~size),
       }),
       run(` (p. `),
       PageReference.make(bookmarkId),
@@ -119,14 +131,14 @@ module Docx = {
     ]
   }
 
-  let bookmarkSection = (id: SectionId.t, title: string): Docx.ParagraphChild.t => {
+  let bookmarkSection = (id: SectionId.t, scopeName: information): Docx.ParagraphChild.t => {
     Bookmark.make({
       id: `section-${id->Int.toString}`,
       children: [
         TextRun.make'({
-          text: `Étape n°${id->Int.toString} : ${title}`,
+          text: `Étape n°${id->Int.toString} : `,
         }),
-      ],
+      ]->Array.concat(scopeName->Utils.getSectionTitle),
     })
   }
 
@@ -149,12 +161,10 @@ module Docx = {
     let output = outputs->Array.find(({name}) => name == selectedOutput)
     let stepParagraphs = refs->Array.mapWithIndex((expl, i) => {
       switch expl {
-      | Ref({id, title}) =>
+      | Ref({id, scopeName}) =>
         p'({
           numbering: {level: 0, reference: "decimal", instance: i->Int.toFloat},
-          children: /* [TextRun.make(`${(i + 1)->Int.toString}. `)]->Array.concat( */
-          linkToSection(id, title),
-          // ),
+          children: linkToSection(id, scopeName, ~size=Some(8)),
         })
       | _ => p("")
       }
@@ -185,7 +195,7 @@ module Docx = {
 
   let getTableWithLinkToSection = (
     ~id,
-    ~title,
+    ~scopeName,
     ~headingText,
     ~bgColor,
     ~maxDepth,
@@ -199,31 +209,35 @@ module Docx = {
           ...textHeadingStyle,
           text: headingText ++ " ",
         }),
-      ]->Array.concat(linkToSection(~textRunOptions=textHeadingStyle, id, title)),
+      ]->Array.concat(linkToSection(~size=Some(10), id, scopeName)),
     })
 
     TableUtils.getTable(~bgColor, ~maxDepth, ~contentRows, ~headingParagraph)
   }
 
-  let getInputsTable = (id: SectionId.t, title: string, inputs: array<var_def>) => {
+  let getInputsTable = (id: SectionId.t, scopeName: information, inputs: array<var_def>) => {
     let headingText = "Entrées de l'étape de calcul"
     let maxDepth = inputs->Utils.getMaxDepth
     let bgColor = #blue_france_925
     let contentRows = inputs->TableUtils.getTableRows(~bgColorRef=ref(bgColor), ~maxDepth)
 
-    getTableWithLinkToSection(~id, ~title, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
+    getTableWithLinkToSection(~id, ~scopeName, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
   }
 
-  let getOutputsTable = (id: SectionId.t, title: string, outputs: array<var_def>) => {
+  let getOutputsTable = (id: SectionId.t, scopeName: information, outputs: array<var_def>) => {
     let headingText = "Résultats de l'étape de calcul"
     let maxDepth = outputs->Utils.getMaxDepth
     let bgColor = #red_marianne_925
     let contentRows = outputs->TableUtils.getTableRows(~bgColorRef=ref(bgColor), ~maxDepth)
 
-    getTableWithLinkToSection(~id, ~title, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
+    getTableWithLinkToSection(~id, ~scopeName, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
   }
 
-  let getExplanationsTable = (id: SectionId.t, title: string, explanations: array<explanation>) => {
+  let getExplanationsTable = (
+    id: SectionId.t,
+    scopeName: information,
+    explanations: array<explanation>,
+  ) => {
     let headingText = "Détails de l'étape de calcul"
     let maxDepth =
       explanations
@@ -245,14 +259,16 @@ module Docx = {
         } else {
           varDef->TableUtils.varDefToTableRow(~maxDepth, ~bgColorRef)
         }
-      | Ref({id, title}) => [
+      | Ref({id, scopeName}) => [
           TableRow.make({
             children: [
               TableUtils.getNormalTableCell(
                 ~bgColor=bgColorRef.contents,
                 [
                   TableUtils.getNormalTableCellParagraph(
-                    [TextRun.make("Calcul de l'étape ")]->Array.concat(linkToSection(id, title)),
+                    [TextRun.make("Calcul de l'étape ")]->Array.concat(
+                      linkToSection(id, scopeName),
+                    ),
                   ),
                 ],
               ),
@@ -262,7 +278,7 @@ module Docx = {
       }
     })
 
-    getTableWithLinkToSection(~id, ~title, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
+    getTableWithLinkToSection(~id, ~scopeName, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
   }
 
   let explanationsToFileChilds = (explanationSectionMap: sectionMap): array<FileChild.t> => {
@@ -270,32 +286,36 @@ module Docx = {
     ->Map.entries
     ->Iterator.toArray
     ->Array.sort(((id, _), (id', _)) => SectionId.compare(id, id'))
-    ->Array.flatMap(((id, {title, inputs, outputs, explanations, parent})) => {
+    ->Array.flatMap(((id, {scopeName, inputs, outputs, explanations, parent})) => {
       if id == SectionId.root {
         []
       } else {
         [
           FileChild.p'({
             heading: #Heading2,
-            children: [bookmarkSection(id, title)],
+            children: [bookmarkSection(id, scopeName)],
             pageBreakBefore: true,
           }),
           FileChild.p'({
             children: if parent != SectionId.root {
-              let parentTitle = explanationSectionMap->getTitle(parent)
-              [TextRun.make("Cette étape de calcul intervient dans l'étape ")]->Array.concat(
-                linkToSection(parent, parentTitle),
-              )
+              let parentTitle = explanationSectionMap->getScopeName(parent)
+              [
+                TextRun.make'({
+                  text: "Cette étape de calcul intervient dans l'étape ",
+                  italics: true,
+                }),
+              ]->Array.concat(linkToSection(parent, parentTitle))
             } else {
               []
             },
           }),
+          FileChild.p(""),
         ]->Array.concat([
-          FileChild.fromTable(getInputsTable(id, title, inputs)),
+          FileChild.fromTable(getInputsTable(id, scopeName, inputs)),
           FileChild.p(""),
-          FileChild.fromTable(getOutputsTable(id, title, outputs)),
+          FileChild.fromTable(getOutputsTable(id, scopeName, outputs)),
           FileChild.p(""),
-          FileChild.fromTable(getExplanationsTable(id, title, explanations)),
+          FileChild.fromTable(getExplanationsTable(id, scopeName, explanations)),
         ])
       }
     })

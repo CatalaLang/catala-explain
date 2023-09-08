@@ -60,19 +60,19 @@ let default: StylesOptions.defaultStylesOptions = {
     heading1: {
       run: {
         ...baseHeadingStyleRun,
-        size: posUniversalMeasure("28pt"),
+        size: posUniversalMeasure("24pt"),
       },
     },
     heading2: {
       run: {
         ...baseHeadingStyleRun,
-        size: posUniversalMeasure("24pt"),
+        size: posUniversalMeasure("22pt"),
       },
     },
     heading3: {
       run: {
         ...baseHeadingStyleRun,
-        size: posUniversalMeasure("22pt"),
+        size: posUniversalMeasure("20pt"),
       },
     },
     heading4: {

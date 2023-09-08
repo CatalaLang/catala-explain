@@ -7,7 +7,12 @@ type options = {
   /** The schema of the user inputs, used for having explicit input form labels. */
   schema: JSON.t,
   uiSchema: JSON.t,
-  /** Key from user inputs to ignore (e.g 'identifiant' in array items) */
+  /**
+   * Key from user inputs to ignore (e.g 'identifiant' in array items).
+   *
+   * @note When parsing user inputs, value are replaced by their provided
+   * 'title' fields in the json schema used for the form.
+   */
   keysToIgnore: array<string>,
   /** The output to show as the result of the computation. */
   selectedOutput: CatalaRuntime.information,

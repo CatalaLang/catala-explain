@@ -25,11 +25,31 @@ let getSubScopeId = (~sep=".", name: information): string => {
   name->List.toArray->Array.joinWith(sep)
 }
 
-let getSectionTitle = (infos: information): string => {
-  switch infos->List.reverse->List.head {
-  | Some(name) => name
-  | None => "_"
-  }
+let getSectionTitle = (~size=None, scopeName: information) => {
+  let nbSegments = scopeName->List.length
+  scopeName
+  ->List.toArray
+  ->Array.mapWithIndex((segment, i) => {
+    let isLast = i == nbSegments - 1
+    switch size {
+    | Some(n) if isLast =>
+      TextRun.make'({
+        text: segment,
+        size: `${n->Int.toString}pt`,
+        bold: true,
+      })
+    | Some(n) =>
+      TextRun.make'({
+        text: `${segment} > `,
+        size: `${(n - 2)->Int.toString}pt`,
+      })
+    | None =>
+      TextRun.make'({
+        text: segment ++ (isLast ? "" : " > "),
+        bold: isLast,
+      })
+    }
+  })
 }
 
 @raises(Error.t)
