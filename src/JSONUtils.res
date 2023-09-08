@@ -1,13 +1,23 @@
-let isEmptyJSON = (inputs: JSON.t): bool => {
-  switch JSON.Classify.classify(inputs) {
+/*
+ * Contains utility functions to manipulate JSON schemas
+ */
+
+let isEmptyJSON = json => {
+  switch JSON.Classify.classify(json) {
   | Object(fields) => Dict.toArray(fields) == []
   | Array([]) => true
   | _ => false
   }
 }
 
-let isNullJSON = (input: JSON.t): bool => {
-  input->JSON.Classify.classify == Null
+let isNullJSON = json => {
+  json->JSON.Classify.classify == Null
+}
+
+let getOptionFlatMap = (json, key) => {
+  json->Option.flatMap(json =>
+    json->JSON.Decode.object->Option.flatMap(fields => fields->Dict.get(key))
+  )
 }
 
 type allOfCondition = {
@@ -17,32 +27,7 @@ type allOfCondition = {
 
 @scope("JSON") @val external parseAllOfCondition: string => allOfCondition = "parse"
 
-/**
-
-Structure of the expected JSON:
- "allOf": [
-        {
-          "if": {
-            "properties": {
-              "kind": {
-                "const": "Locataire" <-- Should match the enumName
-              }
-            }
-          },
-          "then": {
-            "properties": {
-              "payload": {
-                "title": " ",
-                "$ref": "#/definitions/location" <-- WANTED
-              }
-            }
-          }
-        },
-		...
-	]
-* 
-*/
-let getEnumPayloadRefFromAllOf = (enumName: string, json) => {
+let getEnumPayloadRefFromAllOf = (json, enumName) => {
   switch JSON.Classify.classify(json) {
   | Array(items) =>
     let ref = items->Array.findMap(item => {
@@ -61,67 +46,83 @@ let getEnumPayloadRefFromAllOf = (enumName: string, json) => {
   }
 }
 
-// // TODO: Add a generic function to get field of a JSON object following $refs
-let findTitleInSchema = (
-  ~currentSelectedEnumValue: string,
-  ~keysToIgnore: array<string>,
-  keys: list<string>,
-  jsonSchema: JSON.t,
-): option<string> => {
-  let rec aux = (~path, ~json): option<string> => {
+type enumDefObject = {
+  "properties": {
+    "kind": {"anyOf": array<{"title": string, "type": string, "enum": array<string>}>},
+  },
+}
+
+@scope("JSON") @val external parseEnumDefObject: string => enumDefObject = "parse"
+
+let getEnumTitleFromEnumDefObject = (json, enumName) => {
+  let enumDefObject = json->JSON.stringify->parseEnumDefObject
+  let enumDef = enumDefObject["properties"]["kind"]["anyOf"]
+  enumDef->Array.findMap(item => {
+    if item["enum"]->Array.includes(enumName) {
+      Some(item["title"])
+    } else {
+      None
+    }
+  })
+}
+
+let getDefinition = (json, ref) => {
+  switch ref->String.split("/") {
+  | ["#", "definitions", key] => json->Some->getOptionFlatMap("definitions")->getOptionFlatMap(key)
+  | _ => None
+  }
+}
+
+let getReference = (json, fields) => {
+  let obj =
+    fields->Dict.get("type") == Some(JSON.Encode.string("array"))
+      ? // If array get the $ref in items
+        fields->Dict.get("items")->Option.getExn->JSON.Decode.object->Option.getExn
+      : fields
+
+  switch obj->Dict.get("$ref") {
+  | Some(ref) => ref->JSON.Decode.string->Option.flatMap(json->getDefinition(_))
+  | None => Js.Exn.raiseError("See previous message :)")
+  }
+}
+
+let getAtPath = (jsonSchema, ~currentSelectedEnumValue, ~keysToIgnore, ~path) => {
+  let rec getInProperties = (json, path): option<JSON.t> => {
     switch path {
     | list{} => None
-    | list{head} =>
-      jsonGetPath(~path=list{"properties", head}, ~json)->Option.flatMap(fields => {
-        switch JSON.Classify.classify(fields) {
-        | Object(fields) => fields->Dict.get("title")->Option.flatMap(JSON.Decode.string)
-        | _ => None
-        }
-      })
+    | list{head} => json->getAt(list{"properties", head})
     | list{head, ...tail} =>
-      jsonGetPath(~path=list{"properties", head}, ~json)->Option.flatMap(fields => {
+      json
+      ->getAt(list{"properties", head})
+      ->Option.flatMap(fields => {
         switch JSON.Classify.classify(fields) {
         | Object(fields) =>
-          let obj =
-            fields->Dict.get("type") == Some(JSON.Encode.string("array"))
-              ? // If array get the $ref in items
-                fields->Dict.get("items")->Option.getExn->JSON.Decode.object->Option.getExn
-              : fields
-
-          switch obj->Dict.get("$ref") {
-          | Some(ref) =>
-            ref
-            ->JSON.Decode.string
-            ->Option.flatMap(getDefinition(_))
-            ->Option.flatMap(aux(~path=tail, ~json=_))
-          | None =>
-            Console.error2("Can't find the '$ref' field in", fields)
-            Js.Exn.raiseError("See previous message :)")
-          }
+          jsonSchema->getReference(fields)->Option.flatMap(getInProperties(_, tail))
         | _ => None
         }
       })
     }
   }
-  and jsonGetPath = (~json, ~path) => {
+  and getAt = (json, path) => {
     switch path {
     | list{} => Some(json)
     | list{head, ...tail} if !(keysToIgnore->Array.includes(head)) =>
       switch JSON.Classify.classify(json) {
       | Object(fields) if fields->Dict.get("allOf") != None => {
-          let enumPayloadRef = getEnumPayloadRefFromAllOf(
-            currentSelectedEnumValue,
-            fields->Dict.get("allOf")->Option.getUnsafe,
-          )
-          switch getDefinition(enumPayloadRef) {
-          | Some(json) => jsonGetPath(~json, ~path=list{"properties", ...tail})
+          let enumPayloadRef =
+            fields
+            ->Dict.get("allOf")
+            ->Option.getUnsafe
+            ->getEnumPayloadRefFromAllOf(currentSelectedEnumValue)
+          switch jsonSchema->getDefinition(enumPayloadRef) {
+          | Some(json) => json->getAt(list{"properties", ...tail})
           | None =>
             Js.Exn.raiseError(`Can't find the definition corresponding to '${enumPayloadRef}'`)
           }
         }
       | Object(fields) =>
         switch fields->Dict.get(head) {
-        | Some(json) => jsonGetPath(~json, ~path=tail)
+        | Some(json) => json->getAt(tail)
         | None =>
           Js.Exn.raiseError(
             `The key '${head}' isn't included in: ${fields->JSON.stringifyAny->Option.getUnsafe}`,
@@ -133,11 +134,40 @@ let findTitleInSchema = (
     }
   }
 
-  and getDefinition = ref => {
-    switch ref->String.split("/") {
-    | ["#", "definitions", key] => jsonGetPath(~json=jsonSchema, ~path=list{"definitions", key})
+  jsonSchema->getInProperties(path)
+}
+
+let findTitleInSchema = (
+  jsonSchema: JSON.t,
+  ~currentSelectedEnumValue: string,
+  ~keysToIgnore: array<string>,
+  ~keys: list<string>,
+): option<string> => {
+  jsonSchema
+  ->getAtPath(~path=keys, ~currentSelectedEnumValue, ~keysToIgnore)
+  ->Option.flatMap(fields => {
+    switch JSON.Classify.classify(fields) {
+    | Object(fields) => fields->Dict.get("title")->Option.flatMap(JSON.Decode.string)
     | _ => None
     }
+  })
+}
+
+let findEnumNameInSchema = (
+  jsonSchema: JSON.t,
+  ~currentSelectedEnumValue: string,
+  ~enumName: string,
+  ~keys: list<string>,
+): option<string> => {
+  let currentSelectedEnumValue =
+    currentSelectedEnumValue == "" ? enumName : currentSelectedEnumValue
+  switch jsonSchema->getAtPath(~path=keys, ~currentSelectedEnumValue, ~keysToIgnore=[]) {
+  | Some(fields) =>
+    switch JSON.Classify.classify(fields) {
+    | Object(fields) =>
+      jsonSchema->getReference(fields)->Option.flatMap(getEnumTitleFromEnumDefObject(_, enumName))
+    | _ => Js.Exn.raiseError(`Should be an object: ${fields->JSON.stringifyAny->Option.getUnsafe}`)
+    }
+  | None => Js.Exn.raiseError(`Can't find: ${keys->List.toArray->Array.toString}`)
   }
-  aux(~path=keys, ~json=jsonSchema)
 }

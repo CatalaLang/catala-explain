@@ -1,16 +1,11 @@
 open Docx
 open Promise
 
-let getUserInputDocSection = (~userInputs, ~schema, ~uiSchema, ~keysToIgnore): SectionOptions.t => {
+let getUserInputDocSection = (~userInputs, ~schema, ~keysToIgnore): SectionOptions.t => {
   {
     children: [
       FileChild.p'({text: "Entrées du programme", heading: #Heading1}),
-      UserInputs.parseVarDefs(
-        ~json=userInputs,
-        ~schema,
-        ~uiSchema,
-        ~keysToIgnore,
-      )->UserInputs.toTable,
+      UserInputs.parseVarDefs(~json=userInputs, ~schema, ~keysToIgnore)->UserInputs.toTable,
     ],
   }
 }
@@ -132,12 +127,7 @@ let generate = (~userInputs, ~events, ~opts) => {
           }),
         ],
       },
-      getUserInputDocSection(
-        ~userInputs,
-        ~schema=opts.schema,
-        ~uiSchema=opts.uiSchema,
-        ~keysToIgnore=opts.keysToIgnore,
-      ),
+      getUserInputDocSection(~userInputs, ~schema=opts.schema, ~keysToIgnore=opts.keysToIgnore),
       explanationSectionMap->getResultDocSection(~selectedOutput=opts.selectedOutput),
       explanationSectionMap->getExplanationsDocSection,
     ],
