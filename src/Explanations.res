@@ -50,13 +50,25 @@ let getScopeName = (sections: sectionMap, id: SectionId.t): information => {
 let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explanation> => {
   let makeNewSection = (name, inputs, body, outputs) => {
     let id = SectionId.fresh()
+    let outputExplanations =
+      // Parse explanations of nested function calls
+      outputs
+      ->Array.filterMap(({fun_calls}) =>
+        fun_calls->Option.flatMap(def => Some(def->List.toArray->Array.map(def => FunCall(def))))
+      )
+      ->Array.flat
+      ->parseExplanations({...ctx, currentId: id})
+
     let section = {
       id,
       parent: ctx.currentId,
       scopeName: name,
       inputs: List.toArray(inputs),
       outputs,
-      explanations: body->List.toArray->parseExplanations({...ctx, currentId: id}),
+      explanations: body
+      ->List.toArray
+      ->parseExplanations({...ctx, currentId: id})
+      ->Array.concat(outputExplanations),
     }
     ctx.sections->Map.set(id, section)
     Ref({id, scopeName: name})
