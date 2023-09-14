@@ -126,10 +126,10 @@ let isArrayLoggedValue = (v: LoggedValue.t): bool => {
   }
 }
 
-let getVarDefWithoutInfos = (name: list<string>, value: LoggedValue.t): var_def => {
+let createVarDef = (~pos=None, ~name: list<string>, value: LoggedValue.t): var_def => {
   name,
   value,
-  pos: None,
+  pos,
   fun_calls: None,
   io: {io_input: NoInput, io_output: false},
 }

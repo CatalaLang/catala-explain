@@ -179,7 +179,6 @@ let litVarDefToTableRow = (
   }
 }
 
-// TODO: could be factorized
 let rec varDefToTableRow = (
   ~depth=0,
   ~maxDepth,
@@ -187,13 +186,13 @@ let rec varDefToTableRow = (
   {name, value, pos}: var_def,
 ): array<TableRow.t> => {
   switch value {
-  | Enum(_, (_, val)) => {
+  | Enum(_, (_, value)) => {
       // Unwrap the enum
-      let varDefWithoutInfos = Utils.getVarDefWithoutInfos(name, val)
-      if val->Utils.isLitLoggedValue {
-        litVarDefToTableRow(~maxDepth, ~depth, ~bgColor=bgColorRef.contents, varDefWithoutInfos)
+      let varDef = value->Utils.createVarDef(~name, ~pos)
+      if value->Utils.isLitLoggedValue {
+        litVarDefToTableRow(~maxDepth, ~depth, ~bgColor=bgColorRef.contents, varDef)
       } else {
-        varDefToTableRow(~maxDepth, ~depth, ~bgColorRef, varDefWithoutInfos)
+        varDefToTableRow(~maxDepth, ~depth, ~bgColorRef, varDef)
       }
     }
   | Struct(structName, fields) => {
@@ -231,7 +230,7 @@ let rec varDefToTableRow = (
         ->Array.filter(((_, value)) => Utils.loggedValueIsEmbeddable(value))
         ->Array.sort(((_, v1), (_, v2)) => Utils.loggedValueCompare(v1, v2))
         ->Array.flatMap(((field, value)) => {
-          let varDefWithoutInfos = Utils.getVarDefWithoutInfos(list{field}, value)
+          let varDefWithoutPos = value->Utils.createVarDef(~name=list{field})
 
           bgColorRef := bgColorRef.contents->DSFRColors.getNextRowColor
           if value->Utils.isLitLoggedValue {
@@ -239,10 +238,10 @@ let rec varDefToTableRow = (
               ~maxDepth,
               ~depth=depth + 1,
               ~bgColor=bgColorRef.contents,
-              varDefWithoutInfos,
+              varDefWithoutPos,
             )
           } else {
-            varDefToTableRow(~maxDepth, ~depth=depth + 1, ~bgColorRef, varDefWithoutInfos)
+            varDefToTableRow(~maxDepth, ~depth=depth + 1, ~bgColorRef, varDefWithoutPos)
           }
         })
 
@@ -264,16 +263,17 @@ let rec varDefToTableRow = (
       let elemNb = ref(0)
       l->Array.flatMap(value => {
         elemNb := elemNb.contents + 1
-        let varDefWithoutInfos = Utils.getVarDefWithoutInfos(
-          name->List.map(n => n ++ " (élément " ++ elemNb.contents->Int.toString ++ ")"),
-          value,
-        )
+        let varDef =
+          value->Utils.createVarDef(
+            ~name=name->List.map(n => n ++ " (élément " ++ elemNb.contents->Int.toString ++ ")"),
+            ~pos,
+          )
 
         bgColorRef := bgColorRef.contents->DSFRColors.getNextRowColor
         if value->Utils.isLitLoggedValue {
-          litVarDefToTableRow(~maxDepth, ~depth, ~bgColor=bgColorRef.contents, varDefWithoutInfos)
+          litVarDefToTableRow(~maxDepth, ~depth, ~bgColor=bgColorRef.contents, varDef)
         } else {
-          varDefToTableRow(~maxDepth, ~depth, ~bgColorRef, varDefWithoutInfos)
+          varDefToTableRow(~maxDepth, ~depth, ~bgColorRef, varDef)
         }
       })
     }
