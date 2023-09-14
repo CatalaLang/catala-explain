@@ -47,7 +47,7 @@ decco@^1.6.0:
   resolved "https://registry.yarnpkg.com/decco/-/decco-1.6.0.tgz#79a07d518691f92519066a067b77f04ce89b4896"
   integrity sha512-gdeDDPOh45Hz8YGvTkDP7ySo3Ll3ty+KfuFj21+jRbiCoE8HTCNB++pozCiMljxJx39CfvrHRYBY5FO5PMyXzw==
 
-docx@^8.0.4:
+docx@^8.0.4, docx@^8.2.2:
   version "8.2.2"
   resolved "https://registry.yarnpkg.com/docx/-/docx-8.2.2.tgz#9d280920a657493521df2fb8def9f7cfd8a05de4"
   integrity sha512-dWI5WfD/fDCLdjIA7CcDzV/1uyBD+mmr7jDLTUN997hcbPz56E701Kf1EEWdibdH9kk+0tFSmE+C0jTlkRZ7kQ==
@@ -138,10 +138,12 @@ reanalyze@^2.23.0:
   resolved "https://registry.yarnpkg.com/reanalyze/-/reanalyze-2.23.0.tgz#0e2a3109518ccad0ba04366ec1811db17fa07b7e"
   integrity sha512-5pkH13pX1PrZFkIfmZUjKtYCqzFY2jTaEjBsqyR9SM3HLexAtkHTa4vLHTwuYk167KuO1uwWyEppo8NJIjfkOw==
 
-rescript-docx@^0.1.2:
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/rescript-docx/-/rescript-docx-0.1.2.tgz#a179c718e697770904b35b00bd345595e515edeb"
-  integrity sha512-3vAR5zw14ZyCQMIK/GftGXmRs1fQ90VPmUsV0dltNsGy6wSkb+KXA//DE44vJydV+nnPteVHruLxPeqbRjzshA==
+rescript-docx@^0.1.3:
+  version "0.1.3"
+  resolved "https://registry.yarnpkg.com/rescript-docx/-/rescript-docx-0.1.3.tgz#67358264a1b5cacbd36c595e5ba093a1d786154b"
+  integrity sha512-eQLI+WkqedkFLY3Oq7xgW+USZK6OX9O71wVNHBBs39aEi6fQme2shbsJjES1TsklQJe+54kDcldTDy/tJtV/TQ==
+  dependencies:
+    docx "^8.2.2"
 
 rescript@^10.1.4:
   version "10.1.4"

@@ -31,7 +31,7 @@
     "file-saver": "^2.0.5",
     "reanalyze": "^2.23.0",
     "rescript": "^10.1.4",
-    "rescript-docx": "^0.1.2"
+    "rescript-docx": "^0.1.3"
   },
   "dependencies": {
     "docx": "^8.0.4"
