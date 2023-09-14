@@ -306,7 +306,7 @@ module Docx = {
           FileChild.p'({
             heading: #Heading2,
             children: [bookmarkSection(id, scopeName)],
-            pageBreakBefore: true,
+            pageBreakBefore: id != 1,
           }),
           FileChild.p'({
             children: if parent != SectionId.root {
