@@ -125,7 +125,7 @@ module Docx = {
   let linkToSection = (~size: option<int>=None, id: SectionId.t, scopeName: information): array<
     Docx.ParagraphChild.t,
   > => {
-    let bookmarkId = `section-${id->Int.toString}`
+    let bookmarkId = Utils.getBookmarkId(id)
     let run = text =>
       switch size {
       | Some(n) => TextRun.make'({text, size: `${n->Int.toString}pt`})
@@ -150,7 +150,7 @@ module Docx = {
         TextRun.make'({
           text: `Étape n°${id->Int.toString} : `,
         }),
-      ]->Array.concat(scopeName->Utils.getSectionTitle),
+      ]->Array.concat(scopeName->Utils.getSectionTitle(~size=Some(18))),
     })
   }
 
@@ -304,7 +304,7 @@ module Docx = {
       } else {
         [
           FileChild.p'({
-            heading: #Heading2,
+            heading: #Heading3,
             children: [bookmarkSection(id, scopeName)],
             pageBreakBefore: id != 1,
           }),

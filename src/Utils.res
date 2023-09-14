@@ -8,7 +8,6 @@ let lastExn = (l: list<'a>): 'a => l->List.reverse->List.headExn
 let isDate = (str: string): bool => {
   str->Date.fromString->Date.toString != "Invalid Date"
 }
-
 let getNextHeadingLevel = (lvl: HeadingLevel.t): HeadingLevel.t => {
   switch lvl {
   | #Title => #Heading1
@@ -36,6 +35,7 @@ let getSectionTitle = (~size=None, scopeName: information) => {
       TextRun.make'({
         text: segment,
         size: `${n->Int.toString}pt`,
+        italics: true,
         bold: true,
       })
     | Some(n) =>
@@ -46,6 +46,7 @@ let getSectionTitle = (~size=None, scopeName: information) => {
     | None =>
       TextRun.make'({
         text: segment ++ (isLast ? "" : " > "),
+        italics: isLast,
         bold: isLast,
       })
     }
@@ -89,7 +90,7 @@ let getLawHeadingBreadcrumbsLink = (
     children: [
       TextRun.make'({
         text: law_headings->Array.joinWith(" > "),
-        size: "6pt",
+        size: "7pt",
         underline: {
           type_: #single,
         },
@@ -175,4 +176,8 @@ let getMaxDepth = (inputs: array<var_def>): int => {
     }
   })
   ->Array.reduce(1, (a, b) => Math.Int.max(a, b))
+}
+
+let getBookmarkId = (sectionId: int): string => {
+  "section-" ++ sectionId->Int.toString
 }

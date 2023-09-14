@@ -54,7 +54,7 @@ let default: StylesOptions.defaultStylesOptions = {
       run: {
         font: marianneFont,
         color: "3a3a3a",
-        size: posUniversalMeasure("8pt"),
+        size: posUniversalMeasure("9pt"),
       },
     },
     heading1: {
@@ -72,25 +72,26 @@ let default: StylesOptions.defaultStylesOptions = {
     heading3: {
       run: {
         ...baseHeadingStyleRun,
-        size: posUniversalMeasure("20pt"),
+        size: posUniversalMeasure("18pt"),
       },
     },
     heading4: {
       run: {
         ...baseHeadingStyleRun,
-        size: posUniversalMeasure("18pt"),
+        size: posUniversalMeasure("16pt"),
       },
     },
     heading5: {
       run: {
         ...baseHeadingStyleRun,
-        size: posUniversalMeasure("16pt"),
+        size: posUniversalMeasure("14pt"),
       },
     },
     heading6: {
       run: {
         ...baseHeadingStyleRun,
-        size: posUniversalMeasure("14pt"),
+        size: posUniversalMeasure("11pt"),
+        bold: false,
       },
     },
     hyperlink: {
@@ -242,6 +243,17 @@ let characterStyles: array<StylesOptions.characterStyleOptions> = [
     quickFormat: true,
     run: {
       size: posUniversalMeasure("8pt"),
+    },
+  },
+  {
+    id: "ComputeStepToc",
+    name: "ComputeStepToc",
+    basedOn: "Normal",
+    next: "Normal",
+    quickFormat: true,
+    run: {
+      size: posUniversalMeasure("12pt"),
+      bold: false,
     },
   },
 ]

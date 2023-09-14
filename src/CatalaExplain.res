@@ -13,19 +13,21 @@ let sections = [
   {name: "Explications", id: "explanations"},
 ]
 
-let getTocSection = (_explanationSectionMap): SectionOptions.t => {
+let getTocSection = (explanationSectionMap: Explanations.sectionMap): SectionOptions.t => {
   {
-    children: [p'({text: "Table des matières", heading: #Heading1})]->Array.concat(
+    children: [p'({text: "Table des matières", heading: #Heading1})]->Array.concatMany([
       sections->Array.map(({name, id}) => {
         p'({
+          spacing: {
+            before: 100.,
+            after: 100.,
+          },
           children: [
-            TextRun.make'({
-              children: [TextRun.string(name)],
-            }),
+            TextRun.make(name),
             TextRun.make'({children: [Tab.make(), TextRun.string("")]}),
             PageReference.make(id),
           ],
-          heading: #Heading6,
+          heading: #Heading5,
           tabStops: [
             {
               type_: #center,
@@ -35,7 +37,50 @@ let getTocSection = (_explanationSectionMap): SectionOptions.t => {
           ],
         })
       }),
-    ),
+      explanationSectionMap
+      ->Map.entries
+      ->Iterator.toArray
+      ->Array.sort(((id, _), (id', _)) => Explanations.SectionId.compare(id, id'))
+      ->Array.filterMap(((id, {scopeName})) => {
+        if id == Explanations.SectionId.root {
+          None
+        } else {
+          Some(
+            p'({
+              spacing: {
+                after: 50.0,
+                before: 50.0,
+              },
+              children: [
+                TextRun.make'({
+                  bold: true,
+                  children: [Tab.make(), TextRun.string(`Étape n°${id->Int.toString} : `)],
+                }),
+              ]->Array.concatMany([
+                scopeName->Utils.getSectionTitle(~size=Some(11)),
+                [
+                  TextRun.make'({children: [Tab.make()]}),
+                  id->Utils.getBookmarkId->PageReference.make,
+                ],
+              ]),
+              heading: #Heading6,
+              tabStops: [
+                {
+                  type_: #left,
+                  position: 750,
+                  leader: #none,
+                },
+                {
+                  type_: #right,
+                  position: TabStopDefinition.maxPosition,
+                  leader: #dot,
+                },
+              ],
+            }),
+          )
+        }
+      }),
+    ]),
   }
 }
 
