@@ -1,10 +1,61 @@
 open Docx
 open Promise
+open FileChild
+
+type sectionInfos = {
+  name: string,
+  id: string,
+}
+
+let sections = [
+  {name: "Entrées du programme", id: "user-inputs"},
+  {name: "Résultats du programme", id: "result"},
+  {name: "Explications", id: "explanations"},
+]
+
+let getTocSection = (_explanationSectionMap): SectionOptions.t => {
+  {
+    children: [p'({text: "Table des matières", heading: #Heading1})]->Array.concat(
+      sections->Array.map(({name, id}) => {
+        p'({
+          children: [
+            TextRun.make'({
+              children: [TextRun.string(name)],
+            }),
+            TextRun.make'({children: [Tab.make(), TextRun.string("")]}),
+            PageReference.make(id),
+          ],
+          heading: #Heading6,
+          tabStops: [
+            {
+              type_: #center,
+              position: TabStopDefinition.maxPosition,
+              leader: #dot,
+            },
+          ],
+        })
+      }),
+    ),
+  }
+}
+
+let getSectionHeading = i => {
+  let {name, id} = sections->Array.getUnsafe(i)
+  p'({
+    heading: #Heading1,
+    children: [
+      Bookmark.make({
+        id,
+        children: [TextRun.make'({text: name})],
+      }),
+    ],
+  })
+}
 
 let getUserInputDocSection = (~userInputs, ~schema, ~keysToIgnore): SectionOptions.t => {
   {
     children: [
-      FileChild.p'({text: "Entrées du programme", heading: #Heading1}),
+      getSectionHeading(0),
       UserInputs.parseVarDefs(~json=userInputs, ~schema, ~keysToIgnore)->UserInputs.toTable,
     ],
   }
@@ -12,7 +63,7 @@ let getUserInputDocSection = (~userInputs, ~schema, ~keysToIgnore): SectionOptio
 
 let getResultDocSection = (~selectedOutput, explanationSectionMap): SectionOptions.t => {
   {
-    children: [FileChild.p'({text: "Résultats du programme", heading: #Heading1})]->Array.concat(
+    children: [getSectionHeading(1)]->Array.concat(
       explanationSectionMap->Explanations.Docx.outputToFileChilds(~selectedOutput),
     ),
   }
@@ -23,8 +74,8 @@ let getExplanationsDocSection = (
 ): SectionOptions.t => {
   {
     children: [
-      FileChild.p'({text: "Explications", heading: #Heading1}),
-      FileChild.p'({
+      getSectionHeading(2),
+      p'({
         children: [
           TextRun.make("Vous trouverez ci-dessous les explications détaillées du calcul."),
           TextRun.make("Pour chaque "),
@@ -81,7 +132,7 @@ let generate = (~userInputs, ~events, ~opts) => {
         headers: {
           default: Headers.Header.make({
             children: [
-              FileChild.p'({
+              p'({
                 alignment: #right,
                 children: [
                   TextRun.make(`catala-explain v${version}`),
@@ -99,7 +150,7 @@ let generate = (~userInputs, ~events, ~opts) => {
         footers: {
           default: Headers.Footer.make({
             children: [
-              FileChild.p'({
+              p'({
                 alignment: #right,
                 children: [
                   TextRun.make'({
@@ -115,21 +166,22 @@ let generate = (~userInputs, ~events, ~opts) => {
           }),
         },
         children: [
-          FileChild.p'({
+          p'({
             text: opts.title->Option.getWithDefault("Explication individuelle du calcul"),
             heading: #Title,
             alignment: #center,
           }),
-          FileChild.p'({
+          p'({
             text: opts.description->Option.getUnsafe,
             heading: #Heading2,
             alignment: #center,
           }),
         ],
       },
+      getTocSection(explanationSectionMap),
       getUserInputDocSection(~userInputs, ~schema=opts.schema, ~keysToIgnore=opts.keysToIgnore),
-      explanationSectionMap->getResultDocSection(~selectedOutput=opts.selectedOutput),
-      explanationSectionMap->getExplanationsDocSection,
+      getResultDocSection(~selectedOutput=opts.selectedOutput, explanationSectionMap),
+      getExplanationsDocSection(explanationSectionMap),
     ],
   })
   ->Docx.Packer.toBlob
