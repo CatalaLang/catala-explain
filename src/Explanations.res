@@ -319,6 +319,7 @@ module Docx = {
       if id == SectionId.root {
         []
       } else {
+        let parentTitle = explanationSectionMap->getScopeName(parent)
         [
           FileChild.p'({
             heading: #Heading3,
@@ -326,19 +327,18 @@ module Docx = {
             pageBreakBefore: id != 1,
           }),
         ]->Array.concatMany([
-          if parent != SectionId.root {
-            let parentTitle = explanationSectionMap->getScopeName(parent)
-            getIntermediateTOC(
-              "Cette étape intervient dans l'étape calcul :",
-              [Ref({id: parent, scopeName: parentTitle})],
-            )
-          } else {
-            []
-          },
-          getIntermediateTOC(
-            "Cette étape dépend des étapes de calculs suivantes :",
-            explanations,
-          ),
+          parent != SectionId.root
+            ? getIntermediateTOC(
+                "Cette étape intervient dans l'étape calcul :",
+                [Ref({id: parent, scopeName: parentTitle})],
+              )
+            : [],
+          explanations->Array.length != 0
+            ? getIntermediateTOC(
+                "Cette étape dépend des étapes de calculs suivantes :",
+                explanations,
+              )
+            : [],
           [
             FileChild.p(""),
             FileChild.fromTable(getInputsTable(id, scopeName, inputs)),
