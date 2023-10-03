@@ -293,6 +293,23 @@ module Docx = {
     getTableWithLinkToSection(~id, ~scopeName, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
   }
 
+  let getIntermediateTOC = (text, explanations: array<explanation>): array<FileChild.t> => {
+    [FileChild.p(text)]->Array.concat(
+      explanations->Array.filterMap(expl => {
+        switch expl {
+        | Ref({id, scopeName}) =>
+          Some(
+            FileChild.p'({
+              children: linkToSection(id, scopeName, ~size=Some(8)),
+              numbering: {level: 0, reference: "bullet"},
+            }),
+          )
+        | _ => None
+        }
+      }),
+    )
+  }
+
   let explanationsToFileChilds = (explanationSectionMap: sectionMap): array<FileChild.t> => {
     explanationSectionMap
     ->Map.entries
@@ -308,26 +325,28 @@ module Docx = {
             children: [bookmarkSection(id, scopeName)],
             pageBreakBefore: id != 1,
           }),
-          FileChild.p'({
-            children: if parent != SectionId.root {
-              let parentTitle = explanationSectionMap->getScopeName(parent)
-              [
-                TextRun.make'({
-                  text: "Cette étape de calcul intervient dans l'étape ",
-                  italics: true,
-                }),
-              ]->Array.concat(linkToSection(parent, parentTitle))
-            } else {
-              []
-            },
-          }),
-          FileChild.p(""),
-        ]->Array.concat([
-          FileChild.fromTable(getInputsTable(id, scopeName, inputs)),
-          FileChild.p(""),
-          FileChild.fromTable(getOutputsTable(id, scopeName, outputs)),
-          FileChild.p(""),
-          FileChild.fromTable(getExplanationsTable(id, scopeName, explanations)),
+        ]->Array.concatMany([
+          if parent != SectionId.root {
+            let parentTitle = explanationSectionMap->getScopeName(parent)
+            getIntermediateTOC(
+              "Cette étape intervient dans l'étape calcul :",
+              [Ref({id: parent, scopeName: parentTitle})],
+            )
+          } else {
+            []
+          },
+          getIntermediateTOC(
+            "Cette étape dépend des étapes de calculs suivantes :",
+            explanations,
+          ),
+          [
+            FileChild.p(""),
+            FileChild.fromTable(getInputsTable(id, scopeName, inputs)),
+            FileChild.p(""),
+            FileChild.fromTable(getOutputsTable(id, scopeName, outputs)),
+            FileChild.p(""),
+            FileChild.fromTable(getExplanationsTable(id, scopeName, explanations)),
+          ],
         ])
       }
     })

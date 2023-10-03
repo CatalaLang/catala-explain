@@ -148,6 +148,8 @@ type options = {
 let version = "0.1.1"
 
 let generate = (~userInputs, ~events, ~opts) => {
+  open Docx.Util.Types
+
   let explanationSectionMap = events->Explanations.fromEvents
   Document.make({
     title: opts.title->Option.getUnsafe,
@@ -166,7 +168,34 @@ let generate = (~userInputs, ~events, ~opts) => {
               level: 0,
               format: #decimal,
               text: "%1.",
-              alignment: #right,
+              alignment: #left,
+              style: {
+                paragraph: {
+                  indent: {
+                    left: Number.fromFloat(720.),
+                    hanging: Number.fromFloat(360.),
+                  },
+                },
+              },
+            },
+          ],
+        },
+        {
+          reference: "bullet",
+          levels: [
+            {
+              level: 0,
+              format: #bullet,
+              text: "•",
+              alignment: #left,
+              style: {
+                paragraph: {
+                  indent: {
+                    left: Number.fromFloat(720.),
+                    hanging: Number.fromFloat(360.),
+                  },
+                },
+              },
             },
           ],
         },
