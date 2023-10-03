@@ -1,5 +1,6 @@
 {
   "name": "@catala-lang/catala-explain",
+  "namespace": "CatalaExplain",
   "sources": [
     {
       "dir": "src",
@@ -18,10 +19,8 @@
   "bs-dependencies": [
     "@rescript/core",
     "@catala-lang/rescript-catala",
-	"rescript-docx"
+    "rescript-docx"
   ],
-  "bsc-flags": [
-    "-open RescriptCore"
-  ],
+  "bsc-flags": ["-open RescriptCore"],
   "ppx-flags": []
 }
