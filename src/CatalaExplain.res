@@ -1,5 +1,4 @@
 open Docx
-open Promise
 open FileChild
 
 type sectionInfos = {
@@ -138,9 +137,7 @@ type options = {
   title?: string,
   creator?: string,
   description?: string,
-  filename: string,
   schema: JSON.t,
-  uiSchema: JSON.t,
   keysToIgnore: array<string>,
   selectedOutput: CatalaRuntime.information,
 }
@@ -258,9 +255,4 @@ let generate = (~userInputs, ~events, ~opts) => {
       getExplanationsDocSection(explanationSectionMap),
     ],
   })
-  ->Docx.Packer.toBlob
-  ->thenResolve(blob => {
-    FileSaver.saveAs(blob, `${opts.filename}.docx`)
-  })
-  ->ignore
 }
