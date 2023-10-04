@@ -137,14 +137,13 @@ type options = {
   title?: string,
   creator?: string,
   description?: string,
-  schema: JSON.t,
-  keysToIgnore: array<string>,
-  selectedOutput: CatalaRuntime.information,
+  keysToIgnore?: array<string>,
+  selectedOutput?: CatalaRuntime.information,
 }
 
-let version = "0.1.1"
+let version = "0.1.3"
 
-let generate = (~userInputs, ~events, ~opts) => {
+let generate = (~events, ~userInputs, ~schema, ~opts) => {
   open Docx.Util.Types
 
   let explanationSectionMap = events->Explanations.fromEvents
@@ -250,7 +249,11 @@ let generate = (~userInputs, ~events, ~opts) => {
         ],
       },
       getTocSection(explanationSectionMap),
-      getUserInputDocSection(~userInputs, ~schema=opts.schema, ~keysToIgnore=opts.keysToIgnore),
+      getUserInputDocSection(
+        ~userInputs,
+        ~schema,
+        ~keysToIgnore=opts.keysToIgnore->Option.getWithDefault([]),
+      ),
       getResultDocSection(~selectedOutput=opts.selectedOutput, explanationSectionMap),
       getExplanationsDocSection(explanationSectionMap),
     ],
