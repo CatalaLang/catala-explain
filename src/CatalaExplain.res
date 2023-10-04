@@ -141,7 +141,7 @@ type options = {
   selectedOutput?: CatalaRuntime.information,
 }
 
-let version = "0.1.3"
+let version = "0.1.4"
 
 let generate = (~events, ~userInputs, ~schema, ~opts) => {
   open Docx.Util.Types
