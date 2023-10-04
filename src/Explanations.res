@@ -155,9 +155,10 @@ module Docx = {
   }
 
   @raises(Error.t)
-  let outputToFileChilds = (~selectedOutput: information, explanationSectionMap: sectionMap): array<
-    FileChild.t,
-  > => {
+  let outputToFileChilds = (
+    ~selectedOutput: option<information>,
+    explanationSectionMap: sectionMap,
+  ): array<FileChild.t> => {
     open FileChild
 
     let {outputs, explanations} =
@@ -170,7 +171,10 @@ module Docx = {
       | _ => false
       }
     })
-    let output = outputs->Array.find(({name}) => name == selectedOutput)
+    let output = switch selectedOutput {
+    | Some(selectedName) => outputs->Array.find(({name}) => name == selectedName)
+    | None => outputs->Array.get(0)
+    }
     let stepParagraphs = refs->Array.mapWithIndex((expl, i) => {
       switch expl {
       | Ref({id, scopeName}) =>

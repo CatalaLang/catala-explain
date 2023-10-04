@@ -51,17 +51,17 @@ the program.
 
 ```rescript
 let doc = CatalaExplain.generate(
-    // A JSON object containing the user's input used to generate the document
-    ~userInputs=formData,
     // The trace of the catala program
     ~events=CatalaFrenchLaw.retrieveEventsSerialized()->CatalaRuntime.deserializedEvents,
+    // A JSON object containing the user's input used to generate the document
+    ~userInputs=formData,
+    // The schema of the user inputs form, used for having explicit input form labels.
+    ~schema= WebAssets.schema,
     // The options for the document
     ~opts={
         title: "Titre de la décision",
         description: "Description du document",
         creator: "Créateur du document",
-        // The schema of the user inputs form, used for having explicit input form labels.
-        schema: WebAssets.schema,
         // Key from user inputs to ignore (e.g 'identifiant' in array items), instead
         // of using the 'title' field of the schema.
         keysToIgnore: WebAssets.keysToIgnore,
