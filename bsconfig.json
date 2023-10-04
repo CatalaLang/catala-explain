@@ -1,10 +1,10 @@
 {
   "name": "@catala-lang/catala-explain",
-  "namespace": "CatalaExplain",
   "sources": [
     {
       "dir": "src",
-      "subdir": true
+      "subdir": true,
+      "public": ["CatalaExplain"]
     }
   ],
   "package-specs": [
