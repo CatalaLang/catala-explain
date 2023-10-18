@@ -243,8 +243,37 @@ let generate = (~events, ~userInputs, ~schema, ~opts) => {
           }),
           p'({
             text: opts.description->Option.getUnsafe,
-            heading: #Heading2,
+            heading: #Heading3,
             alignment: #center,
+            border: {
+              top: {
+                color: "auto",
+                space: 1.0,
+                size: 6.0,
+                style: #single,
+              },
+              bottom: {
+                color: "auto",
+                space: 1.0,
+                size: 6.0,
+                style: #single,
+              },
+              left: {
+                color: "auto",
+                space: 1.0,
+                size: 6.0,
+                style: #single,
+              },
+              right: {
+                color: "auto",
+                space: 1.0,
+                size: 6.0,
+                style: #single,
+              },
+            },
+          }),
+          p'({
+            text: "Cette explication a été générée automatiquement par Catala à partir des étapes informatiques du calcul. Chaque étape du calcul est ainsi justifiée par une référence juridique présente dans le code source du programme. Cette explication détaillée n'est pas forcément intelligible si vous ne souhaitez pas descendre dans les détails du calcul, cependant elle sera utile pour les concepteurs de l'algorithme en cas de désaccord avec le résultat du calcul.",
           }),
         ],
       },
