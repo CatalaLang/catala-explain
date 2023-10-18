@@ -1,6 +1,6 @@
 {
   "name": "@catala-lang/catala-explain",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "A module for explicability from the trace of a catala program",
   "scripts": {
     "clean": "rescript clean -with-deps",

@@ -122,7 +122,7 @@ let parseVarDefs = (~json, ~schema, ~keysToIgnore): array<var_def> => {
 }
 
 let toTable = (inputs: array<var_def>) => {
-  let headingText = "Informations renseignées par l'utilisateur·ice"
+  let headingText = "Informations renseignées par vous dans le formulaire"
   let maxDepth = inputs->Utils.getMaxDepth
   let bgColor = #blue_france_925
   let contentRows = inputs->TableUtils.getTableRows(~bgColorRef=ref(bgColor), ~maxDepth)

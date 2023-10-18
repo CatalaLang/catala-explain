@@ -180,16 +180,17 @@ module Docx = {
       | Ref({id, scopeName}) =>
         p'({
           numbering: {level: 0, reference: "decimal", instance: i->Int.toFloat},
-          children: linkToSection(id, scopeName, ~size=Some(8)),
+          children: linkToSection(id, scopeName, ~size=Some(12)),
         })
       | _ => p("")
       }
     })
     [
       p'({
+        spacing: {before: 0.25 *. 72.0 *. 20.0},
         children: output
         ->Option.map(output => [
-          TextRun.make(`La valeur calculée par le programme est `),
+          TextRun.make(`La valeur calculée est `),
           TextRun.make'({
             text: output.name->List.reverse->List.headExn,
             style: "VariableName",
@@ -204,8 +205,10 @@ module Docx = {
         ])
         ->Option.getWithDefault([]),
       }),
-      p(""),
-      p(`La valeur a été calculée à partir des étapes de calculs : `),
+      p'({
+        text: `La valeur a été calculée à partir des étapes suivantes : `,
+        spacing: {after: 0.25 *. 72.0 *. 20.0, before: 0.25 *. 72.0 *. 20.0},
+      }),
     ]->Array.concat(stepParagraphs)
   }
 
@@ -298,13 +301,19 @@ module Docx = {
   }
 
   let getIntermediateTOC = (text, explanations: array<explanation>): array<FileChild.t> => {
-    [FileChild.p(text)]->Array.concat(
+    [
+      FileChild.p'({
+        text,
+        spacing: {after: 0.25 *. 72.0 *. 20.0, before: 0.25 *. 72.0 *. 20.0},
+        alignment: #both,
+      }),
+    ]->Array.concat(
       explanations->Array.filterMap(expl => {
         switch expl {
         | Ref({id, scopeName}) =>
           Some(
             FileChild.p'({
-              children: linkToSection(id, scopeName, ~size=Some(8)),
+              children: linkToSection(id, scopeName, ~size=Some(12)),
               numbering: {level: 0, reference: "bullet"},
             }),
           )
@@ -333,13 +342,15 @@ module Docx = {
         ]->Array.concatMany([
           parent != SectionId.root
             ? getIntermediateTOC(
-                "Cette étape intervient dans l'étape calcul :",
+                "Afin de faciliter votre navigation dans le document, nous rappelons \
+que la présente étape de calcul est utilisée dans l'étape parente suivante :",
                 [Ref({id: parent, scopeName: parentTitle})],
               )
             : [],
           explanations->Array.length != 0
             ? getIntermediateTOC(
-                "Cette étape dépend des étapes de calculs suivantes :",
+                "Pour aller directement aux étapes utilisées par la présente étape, \
+veuillez suivre les liens rapides ci-dessous :",
                 explanations,
               )
             : [],
@@ -347,9 +358,9 @@ module Docx = {
             FileChild.p(""),
             FileChild.fromTable(getInputsTable(id, scopeName, inputs)),
             FileChild.p(""),
-            FileChild.fromTable(getOutputsTable(id, scopeName, outputs)),
-            FileChild.p(""),
             FileChild.fromTable(getExplanationsTable(id, scopeName, explanations)),
+            FileChild.p(""),
+            FileChild.fromTable(getOutputsTable(id, scopeName, outputs)),
           ],
         ])
       }

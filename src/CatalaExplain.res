@@ -7,8 +7,8 @@ type sectionInfos = {
 }
 
 let sections = [
-  {name: "Entrées du programme", id: "user-inputs"},
-  {name: "Résultats du programme", id: "result"},
+  {name: "Entrées du calcul", id: "user-inputs"},
+  {name: "Résultats du calcul", id: "result"},
   {name: "Explications", id: "explanations"},
 ]
 
@@ -100,6 +100,15 @@ let getUserInputDocSection = (~userInputs, ~schema, ~keysToIgnore): SectionOptio
   {
     children: [
       getSectionHeading(0),
+      p'({
+        text: "Cette section rappelle quelles sont les entrées du calcul telles que \
+vous les avez renseignées dans le formulaire. Il est important de vérifier \
+que ces informations soient exactes, puisqu'une erreur de votre part dans \
+le remplissage du formulaire mènera très probablement à une erreur dans \
+la détermination du résultat du calcul.",
+        alignment: #both,
+        spacing: {before: 0.25 *. 72.0 *. 20.0, after: 0.25 *. 72.0 *. 20.0},
+      }),
       UserInputs.parseVarDefs(~json=userInputs, ~schema, ~keysToIgnore)->UserInputs.toTable,
     ],
   }
@@ -120,9 +129,11 @@ let getExplanationsDocSection = (
     children: [
       getSectionHeading(2),
       p'({
+        spacing: {before: 0.25 *. 72.0 *. 20.0, after: 0.25 *. 72.0 *. 20.0},
+        alignment: #both,
         children: [
           TextRun.make("Vous trouverez ci-dessous les explications détaillées du calcul."),
-          TextRun.make("Pour chaque "),
+          TextRun.make(" Pour chaque "),
           TextRun.make'({text: "étape", italics: true}),
           TextRun.make(
             " vous trouverez une explication de la règle de calcul utilisée, ainsi que les valeurs des variables utilisées et de potentielles sous-étapes nécessaires.",
@@ -142,6 +153,13 @@ type options = {
 }
 
 let version = "0.1.4"
+
+let solid_border: Docx.BorderOptions.t = {
+  color: "auto",
+  space: 1.0,
+  size: 6.0,
+  style: #single,
+}
 
 let generate = (~events, ~userInputs, ~schema, ~opts) => {
   open Docx.Util.Types
@@ -246,44 +264,67 @@ let generate = (~events, ~userInputs, ~schema, ~opts) => {
             heading: #Heading3,
             alignment: #center,
             border: {
-              top: {
-                color: "auto",
-                space: 1.0,
-                size: 6.0,
-                style: #single,
-              },
-              bottom: {
-                color: "auto",
-                space: 1.0,
-                size: 6.0,
-                style: #single,
-              },
-              left: {
-                color: "auto",
-                space: 1.0,
-                size: 6.0,
-                style: #single,
-              },
-              right: {
-                color: "auto",
-                space: 1.0,
-                size: 6.0,
-                style: #single,
-              },
+              top: solid_border,
+              bottom: solid_border,
+              left: solid_border,
+              right: solid_border,
             },
+            spacing: {before: 1.0 *. 72.0 *. 20.0, after: 1.0 *. 72.0 *. 20.0},
           }),
           p'({
-            text: "Cette explication a été générée automatiquement par Catala à partir des étapes informatiques du calcul. Chaque étape du calcul est ainsi justifiée par une référence juridique présente dans le code source du programme. Cette explication détaillée n'est pas forcément intelligible si vous ne souhaitez pas descendre dans les détails du calcul, cependant elle sera utile pour les concepteurs de l'algorithme en cas de désaccord avec le résultat du calcul.",
+            alignment: #both,
+            children: [
+              TextRun.make("Cette explication a été générée automatiquement par "),
+              Docx.ExternalHyperlink.make({
+                link: "https://code.gouv.fr/fr/explicabilite/catala/",
+                children: [TextRun.make("Catala")],
+              }),
+              TextRun.make(
+                " à partir des étapes informatiques du calcul. Chaque étape du calcul \
+est ainsi justifiée par une référence juridique présente dans le \
+code source du programme. Cette explication détaillée n'est pas \
+forcément intelligible si vous ne souhaitez pas descendre dans les \
+détails du calcul, cependant elle sera utile pour les concepteurs \
+de l'algorithme en cas de désaccord avec le résultat du calcul. Ce document \
+n'est pas destiné à être imprimé en totalité pour éviter de gâcher du papier ; \
+nous vous conseillons de n'imprimer que les entrées et le résultat final du \
+programme si vous souhaitez disposer d'une version papier.",
+              ),
+            ],
+            spacing: {after: 0.5 *. 72.0 *. 20.0},
+          }),
+          p'({
+            alignment: #both,
+            text: "Pour lire l'explication et comprendre quelles sont les étapes \
+du calcul ayant mené au résultat, le document commence par rappeler les données
+d'entrée du programme qui sont celles que vous avez entrées dans le formulaire,
+puis le résultat final du calcul est présenté avec la liste des étapes de \
+haut-niveau ayant mené au résultat. Chacune de ces étapes haut-niveau est \
+ensuite détaillée, et peut renvoyer à d'autres étapes de bas-niveau, formant \
+ainsi un arbre d'explications qui rappelle les \"livres dont vous êtes le héros\". \
+À tout moment, n'hésitez pas à revenir à la table des matières pour vous repérer \
+dans cette jungle d'étapes qui ensemble, documentent l'intégralité du raisonnement \
+juridique effectué pour prendre la décision. À l'intérieur de chaque étape de \
+calcul, vous trouverez les entrées et le résultat de cette étape, ainsi que \
+le détail des calculs ayant mené au résultat de l'étape. Les détails des \
+calculs ainsi que le résultat sont justifiés par des références juridiques \
+présentes dans le code source du programme Catala.",
+            spacing: {after: 0.5 *. 72.0 *. 20.0},
+          }),
+          p'({
+            alignment: #both,
+            text: "Bonne lecture, et n'hésitez pas à vous rapprocher d'un \
+professionnel qui vous aidera à déchiffrer ce document si besoin !",
           }),
         ],
       },
-      getTocSection(explanationSectionMap),
       getUserInputDocSection(
         ~userInputs,
         ~schema,
         ~keysToIgnore=opts.keysToIgnore->Option.getWithDefault([]),
       ),
       getResultDocSection(~selectedOutput=opts.selectedOutput, explanationSectionMap),
+      getTocSection(explanationSectionMap),
       getExplanationsDocSection(explanationSectionMap),
     ],
   })
