@@ -86,18 +86,26 @@ let orderAndFilterEmpty = (values: array<LoggedValue.t>): array<LoggedValue.t> =
 let getLawHeadingBreadcrumbsLink = (
   {filename, start_line, end_line, law_headings}: sourcePosition,
 ): ParagraphChild.t => {
-  ExternalHyperlink.make({
-    children: [
-      TextRun.make'({
-        text: law_headings->Array.joinWith(" > "),
-        size: "7pt",
-        underline: {
-          type_: #single,
-        },
-      }),
-    ],
-    link: `https://github.com/CatalaLang/catala/blob/master/${filename}#L${start_line->Int.toString}-L${end_line->Int.toString}`,
-  })
+  switch Context.sourcesURL.contents {
+  | Some(url) =>
+    ExternalHyperlink.make({
+      children: [
+        TextRun.make'({
+          text: law_headings->Array.joinWith(" > "),
+          size: "7pt",
+          underline: {
+            type_: #single,
+          },
+        }),
+      ],
+      link: `${url}#${filename}-${start_line->Int.toString}-${end_line->Int.toString}`,
+    })
+  | None =>
+    TextRun.make'({
+      text: law_headings->Array.joinWith(" > "),
+      size: "7pt",
+    })
+  }
 }
 
 /**
