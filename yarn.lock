@@ -2,15 +2,6 @@
 # yarn lockfile v1
 
 
-"@catala-lang/french-law@^0.8.3-b.3":
-  version "0.8.3-b.3"
-  resolved "https://registry.yarnpkg.com/@catala-lang/french-law/-/french-law-0.8.3-b.3.tgz#18627d4e434e56a7f77f4448a0a8f20715c60367"
-  integrity sha512-bCvwvD3ZI0C6gILVQjrnuYRlR5u4Sy6Li7dTx+Sqwr05yHX5IXJEy6rY6Bko/fJERPJ7R28xxAyyE70l7XCjww==
-  dependencies:
-    benchmark "^2.1.4"
-    lodash "^4.17.21"
-    platform "^1.3.6"
-
 "@catala-lang/rescript-catala@^0.8.1-b.0":
   version "0.8.1-b.0"
   resolved "https://registry.yarnpkg.com/@catala-lang/rescript-catala/-/rescript-catala-0.8.1-b.0.tgz#46762f85f2e16af8b42ebb980db446189391a978"
@@ -30,14 +21,6 @@
   integrity sha512-ZVPnqU58giiCjSxjVUESDtdPk4QR5WQhhINbc9UBrKLU68MX5BF6kbQzTrkwbolyr0X8ChBpXfavr5mZFKZQ5A==
   dependencies:
     undici-types "~5.25.1"
-
-benchmark@^2.1.4:
-  version "2.1.4"
-  resolved "https://registry.yarnpkg.com/benchmark/-/benchmark-2.1.4.tgz#09f3de31c916425d498cc2ee565a0ebf3c2a5629"
-  integrity sha512-l9MlfN4M1K/H2fbhfMy3B7vJd6AGKJVQn2h6Sg/Yx+KckoUA7ewS5Vv6TjSq18ooE1kS9hhAlQRH3AkXIh/aOQ==
-  dependencies:
-    lodash "^4.17.4"
-    platform "^1.3.3"
 
 core-util-is@~1.0.0:
   version "1.0.3"
@@ -92,11 +75,6 @@ lie@~3.3.0:
   dependencies:
     immediate "~3.0.5"
 
-lodash@^4.17.21, lodash@^4.17.4:
-  version "4.17.21"
-  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
-  integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
-
 nanoid@^4.0.2:
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/nanoid/-/nanoid-4.0.2.tgz#140b3c5003959adbebf521c170f282c5e7f9fb9e"
@@ -106,11 +84,6 @@ pako@~1.0.2:
   version "1.0.11"
   resolved "https://registry.yarnpkg.com/pako/-/pako-1.0.11.tgz#6c9599d340d54dfd3946380252a35705a6b992bf"
   integrity sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==
-
-platform@^1.3.3, platform@^1.3.6:
-  version "1.3.6"
-  resolved "https://registry.yarnpkg.com/platform/-/platform-1.3.6.tgz#48b4ce983164b209c2d45a107adb31f473a6e7a7"
-  integrity sha512-fnWVljUchTro6RiCFvCXBbNhJc2NijN7oIQxbwsyL0buWJPG85v81ehlHI9fXrJsMNgTofEoWIQeClKpgxFLrg==
 
 process-nextick-args@~2.0.0:
   version "2.0.1"
