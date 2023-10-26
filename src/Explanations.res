@@ -187,7 +187,7 @@ module Docx = {
     })
     [
       p'({
-        spacing: {before: 0.25 *. 72.0 *. 20.0},
+        spacing: {before: Styles.Spacing.small},
         children: output
         ->Option.map(output => [
           TextRun.make(`La valeur calculée est `),
@@ -207,7 +207,7 @@ module Docx = {
       }),
       p'({
         text: `La valeur a été calculée à partir des étapes suivantes : `,
-        spacing: {after: 0.25 *. 72.0 *. 20.0, before: 0.25 *. 72.0 *. 20.0},
+        spacing: {after: Styles.Spacing.small, before: Styles.Spacing.small},
       }),
     ]->Array.concat(stepParagraphs)
   }
@@ -304,7 +304,7 @@ module Docx = {
     [
       FileChild.p'({
         text,
-        spacing: {after: 0.25 *. 72.0 *. 20.0, before: 0.25 *. 72.0 *. 20.0},
+        spacing: {after: Styles.Spacing.xSmall, before: Styles.Spacing.small},
         alignment: #both,
       }),
     ]->Array.concat(
@@ -313,7 +313,7 @@ module Docx = {
         | Ref({id, scopeName}) =>
           Some(
             FileChild.p'({
-              children: linkToSection(id, scopeName, ~size=Some(12)),
+              children: linkToSection(id, scopeName, ~size=Some(11)),
               numbering: {level: 0, reference: "bullet"},
             }),
           )

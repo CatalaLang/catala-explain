@@ -37,6 +37,21 @@ module DSFRColors = {
   }
 }
 
+module Spacing = {
+  let base = 72.0 *. 20.0
+  let large = 1.0 *. base
+  let medium = 0.5 *. base
+  let small = 0.25 *. base
+  let xSmall = 0.1 *. base
+}
+
+let solidBorder: Docx.BorderOptions.t = {
+  color: "auto",
+  space: 1.0,
+  size: 6.0,
+  style: #single,
+}
+
 let marianneFont = Font.fromString("Marianne")
 let posUniversalMeasure = Types.NumberOrPositiveUniversalMeasure.fromPositiveUniversalMeasure
 

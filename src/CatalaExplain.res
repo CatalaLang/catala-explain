@@ -107,7 +107,7 @@ que ces informations soient exactes, puisqu'une erreur de votre part dans \
 le remplissage du formulaire mènera très probablement à une erreur dans \
 la détermination du résultat du calcul.",
         alignment: #both,
-        spacing: {before: 0.25 *. 72.0 *. 20.0, after: 0.25 *. 72.0 *. 20.0},
+        spacing: {before: Styles.Spacing.small, after: Styles.Spacing.small},
       }),
       UserInputs.parseVarDefs(~json=userInputs, ~schema, ~keysToIgnore)->UserInputs.toTable,
     ],
@@ -129,7 +129,7 @@ let getExplanationsDocSection = (
     children: [
       getSectionHeading(2),
       p'({
-        spacing: {before: 0.25 *. 72.0 *. 20.0, after: 0.25 *. 72.0 *. 20.0},
+        spacing: {before: Styles.Spacing.small, after: Styles.Spacing.small},
         alignment: #both,
         children: [
           TextRun.make("Vous trouverez ci-dessous les explications détaillées du calcul."),
@@ -152,14 +152,7 @@ type options = {
   selectedOutput?: CatalaRuntime.information,
 }
 
-let version = "0.1.4"
-
-let solid_border: Docx.BorderOptions.t = {
-  color: "auto",
-  space: 1.0,
-  size: 6.0,
-  style: #single,
-}
+let version = "0.1.5"
 
 let generate = (~events, ~userInputs, ~schema, ~opts) => {
   open Docx.Util.Types
@@ -264,12 +257,12 @@ let generate = (~events, ~userInputs, ~schema, ~opts) => {
             heading: #Heading3,
             alignment: #center,
             border: {
-              top: solid_border,
-              bottom: solid_border,
-              left: solid_border,
-              right: solid_border,
+              top: Styles.solidBorder,
+              bottom: Styles.solidBorder,
+              left: Styles.solidBorder,
+              right: Styles.solidBorder,
             },
-            spacing: {before: 1.0 *. 72.0 *. 20.0, after: 1.0 *. 72.0 *. 20.0},
+            spacing: {before: Styles.Spacing.large, after: Styles.Spacing.large},
           }),
           p'({
             alignment: #both,
@@ -291,7 +284,7 @@ nous vous conseillons de n'imprimer que les entrées et le résultat final du \
 programme si vous souhaitez disposer d'une version papier.",
               ),
             ],
-            spacing: {after: 0.5 *. 72.0 *. 20.0},
+            spacing: {after: Styles.Spacing.medium},
           }),
           p'({
             alignment: #both,
@@ -309,7 +302,7 @@ calcul, vous trouverez les entrées et le résultat de cette étape, ainsi que \
 le détail des calculs ayant mené au résultat de l'étape. Les détails des \
 calculs ainsi que le résultat sont justifiés par des références juridiques \
 présentes dans le code source du programme Catala.",
-            spacing: {after: 0.5 *. 72.0 *. 20.0},
+            spacing: {after: Styles.Spacing.medium},
           }),
           p'({
             alignment: #both,
