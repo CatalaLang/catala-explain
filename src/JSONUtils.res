@@ -140,11 +140,10 @@ let getAtPath = (jsonSchema, ~currentSelectedEnumValue, ~keysToIgnore, ~path) =>
 let findTitleInSchema = (
   jsonSchema: JSON.t,
   ~currentSelectedEnumValue: string,
-  ~keysToIgnore: array<string>,
   ~keys: list<string>,
 ): option<string> => {
   jsonSchema
-  ->getAtPath(~path=keys, ~currentSelectedEnumValue, ~keysToIgnore)
+  ->getAtPath(~path=keys, ~currentSelectedEnumValue, ~keysToIgnore=Context.keysToIgnore.contents)
   ->Option.flatMap(fields => {
     switch JSON.Classify.classify(fields) {
     | Object(fields) => fields->Dict.get("title")->Option.flatMap(JSON.Decode.string)

@@ -11,6 +11,8 @@ type options = {
   keysToIgnore?: array<string>,
   /* @param selectedOutput The output to show as the result of the computation. */
   selectedOutput?: CatalaRuntime.information,
+  /* @param sourcesURL The URL to the website exposing source code of the Catala program. */
+  sourcesURL?: string,
 }
 
 /**

@@ -96,7 +96,7 @@ let getSectionHeading = i => {
   })
 }
 
-let getUserInputDocSection = (~userInputs, ~schema, ~keysToIgnore): SectionOptions.t => {
+let getUserInputDocSection = (~userInputs, ~schema): SectionOptions.t => {
   {
     children: [
       getSectionHeading(0),
@@ -109,15 +109,15 @@ la détermination du résultat du calcul.",
         alignment: #both,
         spacing: {before: Styles.Spacing.small, after: Styles.Spacing.small},
       }),
-      UserInputs.parseVarDefs(~json=userInputs, ~schema, ~keysToIgnore)->UserInputs.toTable,
+      UserInputs.parseVarDefs(~json=userInputs, ~schema)->UserInputs.toTable,
     ],
   }
 }
 
-let getResultDocSection = (~selectedOutput, explanationSectionMap): SectionOptions.t => {
+let getResultDocSection = (explanationSectionMap): SectionOptions.t => {
   {
     children: [getSectionHeading(1)]->Array.concat(
-      explanationSectionMap->Explanations.Docx.outputToFileChilds(~selectedOutput),
+      explanationSectionMap->Explanations.Docx.outputToFileChilds,
     ),
   }
 }
@@ -150,12 +150,17 @@ type options = {
   description?: string,
   keysToIgnore?: array<string>,
   selectedOutput?: CatalaRuntime.information,
+  sourcesURL?: string,
 }
 
 let version = "0.1.5"
 
 let generate = (~events, ~userInputs, ~schema, ~opts) => {
   open Docx.Util.Types
+
+  Context.keysToIgnore := opts.keysToIgnore->Option.getWithDefault([])
+  Context.sourcesURL := opts.sourcesURL
+  Context.selectedOutput := opts.selectedOutput
 
   let explanationSectionMap = events->Explanations.fromEvents
   Document.make({
@@ -311,12 +316,8 @@ professionnel qui vous aidera à déchiffrer ce document si besoin !",
           }),
         ],
       },
-      getUserInputDocSection(
-        ~userInputs,
-        ~schema,
-        ~keysToIgnore=opts.keysToIgnore->Option.getWithDefault([]),
-      ),
-      getResultDocSection(~selectedOutput=opts.selectedOutput, explanationSectionMap),
+      getUserInputDocSection(~userInputs, ~schema),
+      getResultDocSection(explanationSectionMap),
       getTocSection(explanationSectionMap),
       getExplanationsDocSection(explanationSectionMap),
     ],

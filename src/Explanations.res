@@ -155,10 +155,7 @@ module Docx = {
   }
 
   @raises(Error.t)
-  let outputToFileChilds = (
-    ~selectedOutput: option<information>,
-    explanationSectionMap: sectionMap,
-  ): array<FileChild.t> => {
+  let outputToFileChilds = (explanationSectionMap: sectionMap): array<FileChild.t> => {
     open FileChild
 
     let {outputs, explanations} =
@@ -171,7 +168,7 @@ module Docx = {
       | _ => false
       }
     })
-    let output = switch selectedOutput {
+    let output = switch Context.selectedOutput.contents {
     | Some(selectedName) => outputs->Array.find(({name}) => name == selectedName)
     | None => outputs->Array.get(0)
     }

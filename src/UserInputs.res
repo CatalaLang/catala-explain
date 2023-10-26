@@ -13,7 +13,7 @@ let getCompleteEnumName = (~currentSelectedEnumValue="", jsonSchema, enumName, c
   }
 }
 
-let parseVarDefs = (~json, ~schema, ~keysToIgnore): array<var_def> => {
+let parseVarDefs = (~json, ~schema): array<var_def> => {
   let def = (name, value) => {
     pos: None,
     io: {io_input: NoInput, io_output: false},
@@ -43,8 +43,7 @@ let parseVarDefs = (~json, ~schema, ~keysToIgnore): array<var_def> => {
         ->Dict.toArray
         ->Array.map(((key, value)) => {
           let newPath = path->List.concat(list{key})
-          let name =
-            schema->findTitleInSchema(~keys=newPath, ~keysToIgnore, ~currentSelectedEnumValue)
+          let name = schema->findTitleInSchema(~keys=newPath, ~currentSelectedEnumValue)
           let name = name->Option.getWithDefault(key)
 
           def(list{name}, value->parseValue(~path=newPath, ~currentSelectedEnumValue))
@@ -106,7 +105,7 @@ let parseVarDefs = (~json, ~schema, ~keysToIgnore): array<var_def> => {
           let newPath = currentPath->List.concat(list{key})
           let name =
             schema
-            ->findTitleInSchema(~keys=newPath, ~currentSelectedEnumValue, ~keysToIgnore)
+            ->findTitleInSchema(~keys=newPath, ~currentSelectedEnumValue)
             ->Option.getWithDefault(key)
 
           (name, value->parseValue(~path=newPath, ~currentSelectedEnumValue))
