@@ -45,7 +45,7 @@ let litLoggedValueToParagraphChild = (val: LoggedValue.t): ParagraphChild.t => {
     })
   | Array([]) =>
     TextRun.make'({
-      text: "∅",
+      text: "aucun",
       style: "ArrayLiteral",
     })
   | _ => Js.Exn.raiseError(`Should be a literal logged value`)
