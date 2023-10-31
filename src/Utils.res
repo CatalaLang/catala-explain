@@ -86,13 +86,15 @@ let orderAndFilterEmpty = (values: array<LoggedValue.t>): array<LoggedValue.t> =
 let getLawHeadingBreadcrumbsLink = (
   {filename, start_line, end_line, law_headings}: sourcePosition,
 ): ParagraphChild.t => {
+  let text = law_headings->Array.reverse->Array.joinWith(" > ")
+  let size = "7pt"
   switch Context.sourcesURL.contents {
   | Some(url) =>
     ExternalHyperlink.make({
       children: [
         TextRun.make'({
-          text: law_headings->Array.joinWith(" > "),
-          size: "7pt",
+          text,
+          size,
           underline: {
             type_: #single,
           },
@@ -100,11 +102,7 @@ let getLawHeadingBreadcrumbsLink = (
       ],
       link: `${url}#${filename}-${start_line->Int.toString}-${end_line->Int.toString}`,
     })
-  | None =>
-    TextRun.make'({
-      text: law_headings->Array.joinWith(" > "),
-      size: "7pt",
-    })
+  | None => TextRun.make'({text, size})
   }
 }
 
