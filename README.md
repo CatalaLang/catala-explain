@@ -12,7 +12,7 @@
 <!-- ![CI][ci-link] ![NPM][npm-link] -->
 A module for explicability from the trace of a catala program.
 
-<img width="600" src="https://github.com/CatalaLang/catala-explain/assets/44124798/c9478ce4-e204-42a2-b4fd-d600a378a9be"/>
+<img width="600" src="https://github.com/CatalaLang/catala-explain/assets/44124798/4cd34137-2dd1-477f-9581-a6d2c466f3b0"/>
 <!-- ![Screenshot from 2023-10-04 11-24-52](https://github.com/CatalaLang/catala-explain/assets/44124798/c9478ce4-e204-42a2-b4fd-d600a378a9be) -->
 
 
