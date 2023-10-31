@@ -3,35 +3,35 @@ open Util
 
 module DSFRColors = {
   type t = [
-    | #blue_france_925
-    | #blue_france_975
-    | #red_marianne_925
-    | #red_marianne_975
-    | #green_emeraude_925
-    | #green_emeraude_975
-    | #grey_main_525
+    | #blue
+    | #blue_light
+    | #red
+    | #red_light
+    | #yellow
+    | #yellow_light
+    | #grey
   ]
 
   let toHex = (color: t): string => {
     switch color {
-    | #blue_france_925 => "#e3e3fd"
-    | #blue_france_975 => "#f5f5fe"
-    | #red_marianne_925 => "#fddede"
-    | #red_marianne_975 => "#fef4f4"
-    | #green_emeraude_925 => "#fde39c"
-    | #green_emeraude_975 => "#fef6e3"
-    | #grey_main_525 => "#666666"
+    | #blue => "#e9edfe"
+    | #blue_light => "#f5f5fe"
+    | #red => "#fee9e7"
+    | #red_light => "#fef4f4"
+    | #yellow => "#feecc2"
+    | #yellow_light => "#fef6e3"
+    | #grey => "#666666"
     }
   }
 
   let getNextRowColor = (color: t) => {
     switch color {
-    | #blue_france_925 => #blue_france_975
-    | #blue_france_975 => #blue_france_925
-    | #red_marianne_925 => #red_marianne_975
-    | #red_marianne_975 => #red_marianne_925
-    | #green_emeraude_925 => #green_emeraude_975
-    | #green_emeraude_975 => #green_emeraude_925
+    | #blue => #blue_light
+    | #blue_light => #blue
+    | #red => #red_light
+    | #red_light => #red
+    | #yellow => #yellow_light
+    | #yellow_light => #yellow
     | c => c
     }
   }
@@ -150,7 +150,7 @@ let characterStyles: array<StylesOptions.characterStyleOptions> = [
     run: {
       font: marianneFont,
       bold: true,
-      color: "BB0066",
+      color: "#BB0066",
     },
   },
   {
@@ -163,7 +163,7 @@ let characterStyles: array<StylesOptions.characterStyleOptions> = [
       font: marianneFont,
       bold: true,
       size: posUniversalMeasure("8pt"),
-      color: "161616",
+      color: "#18753c",
     },
   },
   {
@@ -175,7 +175,7 @@ let characterStyles: array<StylesOptions.characterStyleOptions> = [
     run: {
       font: marianneFont,
       bold: true,
-      color: "BA2121",
+      color: "#e4794a",
     },
   },
   {
@@ -187,7 +187,7 @@ let characterStyles: array<StylesOptions.characterStyleOptions> = [
     run: {
       font: marianneFont,
       bold: true,
-      color: "008000",
+      color: "#008000",
     },
   },
   {
@@ -199,7 +199,7 @@ let characterStyles: array<StylesOptions.characterStyleOptions> = [
     run: {
       font: marianneFont,
       bold: true,
-      color: "BB0066",
+      color: "#BB0066",
     },
   },
   {
@@ -211,7 +211,7 @@ let characterStyles: array<StylesOptions.characterStyleOptions> = [
     run: {
       font: marianneFont,
       bold: true,
-      color: "BB0066",
+      color: "#BB0066",
     },
   },
   {
@@ -223,7 +223,7 @@ let characterStyles: array<StylesOptions.characterStyleOptions> = [
     run: {
       font: marianneFont,
       bold: true,
-      color: "0000FF",
+      color: "#0000FF",
     },
   },
   {
@@ -245,7 +245,7 @@ let characterStyles: array<StylesOptions.characterStyleOptions> = [
     quickFormat: true,
     run: {
       underline: {
-        color: "161616",
+        color: "#161616",
         type_: #single,
       },
     },

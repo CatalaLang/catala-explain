@@ -234,7 +234,7 @@ module Docx = {
   let getInputsTable = (id: SectionId.t, scopeName: information, inputs: array<var_def>) => {
     let headingText = "Entrées de l'étape de calcul"
     let maxDepth = inputs->Utils.getMaxDepth
-    let bgColor = #blue_france_925
+    let bgColor = #blue
     let contentRows = inputs->TableUtils.getTableRows(~bgColorRef=ref(bgColor), ~maxDepth)
 
     getTableWithLinkToSection(~id, ~scopeName, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
@@ -243,7 +243,7 @@ module Docx = {
   let getOutputsTable = (id: SectionId.t, scopeName: information, outputs: array<var_def>) => {
     let headingText = "Résultats de l'étape de calcul"
     let maxDepth = outputs->Utils.getMaxDepth
-    let bgColor = #red_marianne_925
+    let bgColor = #red
     let contentRows = outputs->TableUtils.getTableRows(~bgColorRef=ref(bgColor), ~maxDepth)
 
     getTableWithLinkToSection(~id, ~scopeName, ~headingText, ~bgColor, ~maxDepth, ~contentRows)
@@ -264,7 +264,7 @@ module Docx = {
         }
       )
       ->Utils.getMaxDepth
-    let bgColor = #green_emeraude_925
+    let bgColor = #yellow
     let bgColorRef = ref(bgColor)
     let contentRows = explanations->Array.flatMap(expl => {
       bgColorRef := bgColorRef.contents->getNextRowColor

@@ -123,7 +123,7 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
 let toTable = (inputs: array<var_def>) => {
   let headingText = "Informations renseignées par vous dans le formulaire"
   let maxDepth = inputs->Utils.getMaxDepth
-  let bgColor = #blue_france_925
+  let bgColor = #blue
   let contentRows = inputs->TableUtils.getTableRows(~bgColorRef=ref(bgColor), ~maxDepth)
   let headingParagraph = Paragraph.make'({
     spacing: {before: 80.0, after: 80.0},

@@ -63,6 +63,10 @@ let getNormalTableCell = (
     borders,
     columnSpan,
     children,
+    margins: {
+      top: Spacing.xSmall *. 0.5,
+      bottom: Spacing.xSmall *. 0.5,
+    },
   })
 }
 
@@ -104,11 +108,15 @@ let getLawHeadingInTableRow = (
           shading: {
             fill: bgColor->toHex,
           },
+          margins: {
+            top: Spacing.xSmall *. 0.25,
+            bottom: Spacing.xSmall *. 0.25,
+          },
           borders: {
             top: {
               style: #dotted,
               size: 0.25,
-              color: #grey_main_525->toHex,
+              color: #grey->toHex,
             },
           },
         }),
