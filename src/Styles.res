@@ -162,8 +162,7 @@ let characterStyles: array<StylesOptions.characterStyleOptions> = [
     run: {
       font: marianneFont,
       bold: true,
-      size: posUniversalMeasure("8pt"),
-      color: "#18753c",
+      color: "#BB0066",
     },
   },
   {
