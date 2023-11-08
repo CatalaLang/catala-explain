@@ -3,11 +3,11 @@ open JSONUtils
 open CatalaRuntime
 open Docx
 
-let getCompleteEnumName = (~currentSelectedEnumValue="", jsonSchema, enumName, currentPath) => {
+let getCompleteEnumName = (~parentEnums, jsonSchema, enumName, currentPath) => {
   switch JSON.Classify.classify(enumName) {
   | String(s) =>
     jsonSchema
-    ->findEnumNameInSchema(~enumName=s, ~keys=currentPath, ~currentSelectedEnumValue)
+    ->findEnumNameInSchema(~enumName=s, ~keys=currentPath, ~parentEnums)
     ->Option.getWithDefault(s)
   | _ => Js.Exn.raiseError("Enum name must be a string, got " ++ JSON.stringify(enumName))
   }
@@ -22,20 +22,20 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
     value,
   }
 
-  let rec parse = (~currentSelectedEnumValue="", ~path=list{}, json) => {
+  let rec parse = (~parentEnums: array<string>=[], ~path: list<string>=list{}, json) => {
     switch JSON.Classify.classify(json) {
     | Object(items) =>
       switch (items->Dict.get("kind"), items->Dict.get("payload")) {
       | (Some(kindVal), None) =>
-        let name = schema->getCompleteEnumName(kindVal, path)
+        let name = schema->getCompleteEnumName(kindVal, path, ~parentEnums)
         [def(list{name}, Enum(list{}, (name, Unit)))]
       | (Some(kindVal), Some(payload)) if isEmptyJSON(payload) || isNullJSON(payload) =>
-        let name = schema->getCompleteEnumName(kindVal, path)
+        let name = schema->getCompleteEnumName(kindVal, path, ~parentEnums)
         [def(list{name}, Enum(list{}, (name, Unit)))]
       | (Some(kindVal), Some(payload)) => [
           def(
-            list{schema->getCompleteEnumName(kindVal, path)},
-            payload->parseValue(~path, ~currentSelectedEnumValue),
+            list{schema->getCompleteEnumName(kindVal, path, ~parentEnums)},
+            payload->parseValue(~path, ~parentEnums),
           ),
         ]
       | (None, None) =>
@@ -43,46 +43,36 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
         ->Dict.toArray
         ->Array.map(((key, value)) => {
           let newPath = path->List.concat(list{key})
-          let name = schema->findTitleInSchema(~keys=newPath, ~currentSelectedEnumValue)
+          let name = schema->findTitleInSchema(~keys=newPath, ~parentEnums)
           let name = name->Option.getWithDefault(key)
 
-          def(list{name}, value->parseValue(~path=newPath, ~currentSelectedEnumValue))
+          def(list{name}, value->parseValue(~path=newPath, ~parentEnums))
         })
       | _ => failwith("invalid user inputs in [parse]")
       }
     | _ => failwith("invalid user inputs in [parse]")
     }
   }
-  and parseValue = (
-    ~inArray=false,
-    ~currentSelectedEnumValue,
-    ~path: list<string>,
-    json: JSON.t,
-  ): LoggedValue.t => {
+  and parseValue = (~parentEnums, ~path, json): LoggedValue.t => {
     switch JSON.Classify.classify(json) {
     | Object(items) =>
       switch (items->Dict.get("kind"), items->Dict.get("payload")) {
       | (Some(kindVal), None) =>
-        Enum(list{}, (schema->getCompleteEnumName(kindVal, path, ~currentSelectedEnumValue), Unit))
+        Enum(list{}, (schema->getCompleteEnumName(kindVal, path, ~parentEnums), Unit))
       | (Some(kindVal), Some(payload)) if isEmptyJSON(payload) || isNullJSON(payload) => {
-          let name = schema->getCompleteEnumName(kindVal, path, ~currentSelectedEnumValue)
+          let name = schema->getCompleteEnumName(kindVal, path, ~parentEnums)
           Enum(list{}, (name, Unit))
         }
       | (Some(kindVal), Some(payload)) => {
-          let currentSelectedEnumValue = inArray
-            ? kindVal->JSON.Decode.string->Option.getExn
-            : schema->getCompleteEnumName(kindVal, path)
-          Struct(
-            list{currentSelectedEnumValue},
-            payload->parseFields(path, ~currentSelectedEnumValue),
-          )
+          let newSelectedEnum = kindVal->JSON.Decode.string->Option.getExn
+          parentEnums->Array.push(newSelectedEnum)
+          Struct(list{newSelectedEnum}, payload->parseFields(path, ~parentEnums))
         }
-      | (None, None) => Struct(list{}, json->parseFields(path, ~currentSelectedEnumValue))
+      | (None, None) => Struct(list{}, json->parseFields(path, ~parentEnums))
       | (None, Some(_)) =>
         Js.Exn.raiseError("Should not contain a 'payload' without a specified 'kind'")
       }
-    | Array(items) =>
-      Array(items->Array.map(parseValue(_, ~path, ~currentSelectedEnumValue, ~inArray=true)))
+    | Array(items) => Array(items->Array.map(parseValue(_, ~path, ~parentEnums)))
     | String(s) if s->isDate => Date(s)
     | String(s) => Duration(s)
     | Bool(b) => Bool(b)
@@ -90,11 +80,7 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
     | Null => Unit
     }
   }
-  and parseFields = (
-    ~currentSelectedEnumValue: string,
-    json: JSON.t,
-    currentPath: list<string>,
-  ): list<(string, LoggedValue.t)> => {
+  and parseFields = (~parentEnums, json, currentPath): list<(string, LoggedValue.t)> => {
     switch JSON.Classify.classify(json) {
     | Object(items) =>
       switch (items->Dict.get("kind"), items->Dict.get("payload")) {
@@ -104,11 +90,9 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
         ->Array.map(((key, value)) => {
           let newPath = currentPath->List.concat(list{key})
           let name =
-            schema
-            ->findTitleInSchema(~keys=newPath, ~currentSelectedEnumValue)
-            ->Option.getWithDefault(key)
+            schema->findTitleInSchema(~keys=newPath, ~parentEnums)->Option.getWithDefault(key)
 
-          (name, value->parseValue(~path=newPath, ~currentSelectedEnumValue))
+          (name, value->parseValue(~path=newPath, ~parentEnums))
         })
         ->List.fromArray
       | _ => Js.Exn.raiseError("Should not contain 'kind' or 'payload'")

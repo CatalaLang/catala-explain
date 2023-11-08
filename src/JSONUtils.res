@@ -38,10 +38,7 @@ let getEnumPayloadRefFromAllOf = (json, enumName) => {
         None
       }
     })
-    switch ref {
-    | Some(r) => r
-    | None => Js.Exn.raiseError(`Can't find corresponding $ref for enum: ${enumName}`)
-    }
+    ref
   | _ => Js.Exn.raiseError("AllOf element should be an array")
   }
 }
@@ -86,7 +83,7 @@ let getReference = (json, fields) => {
   }
 }
 
-let getAtPath = (jsonSchema, ~currentSelectedEnumValue, ~keysToIgnore, ~path) => {
+let getAtPath = (jsonSchema, ~parentEnums, ~keysToIgnore, ~path) => {
   let rec getInProperties = (json, path): option<JSON.t> => {
     switch path {
     | list{} => None
@@ -109,15 +106,19 @@ let getAtPath = (jsonSchema, ~currentSelectedEnumValue, ~keysToIgnore, ~path) =>
     | list{head, ...tail} if !(keysToIgnore->Array.includes(head)) =>
       switch JSON.Classify.classify(json) {
       | Object(fields) if fields->Dict.get("allOf") != None => {
-          let enumPayloadRef =
-            fields
-            ->Dict.get("allOf")
-            ->Option.getUnsafe
-            ->getEnumPayloadRefFromAllOf(currentSelectedEnumValue)
-          switch jsonSchema->getDefinition(enumPayloadRef) {
-          | Some(json) => json->getAt(list{"properties", ...tail})
+          let enumPayloadRef = parentEnums->Array.findMap(enumValue => {
+            fields->Dict.get("allOf")->Option.getUnsafe->getEnumPayloadRefFromAllOf(enumValue)
+          })
+          switch enumPayloadRef {
           | None =>
-            Js.Exn.raiseError(`Can't find the definition corresponding to '${enumPayloadRef}'`)
+            Js.Exn.raiseError(
+              `Can't find the enumPayloadRef for one of: ${parentEnums->Array.toString}`,
+            )
+          | Some(ref) =>
+            switch jsonSchema->getDefinition(ref) {
+            | Some(json) => json->getAt(list{"properties", ...tail})
+            | None => Js.Exn.raiseError(`Can't find the definition corresponding to '${ref}'`)
+            }
           }
         }
       | Object(fields) =>
@@ -139,11 +140,11 @@ let getAtPath = (jsonSchema, ~currentSelectedEnumValue, ~keysToIgnore, ~path) =>
 
 let findTitleInSchema = (
   jsonSchema: JSON.t,
-  ~currentSelectedEnumValue: string,
+  ~parentEnums: array<string>,
   ~keys: list<string>,
 ): option<string> => {
   jsonSchema
-  ->getAtPath(~path=keys, ~currentSelectedEnumValue, ~keysToIgnore=Context.keysToIgnore.contents)
+  ->getAtPath(~path=keys, ~parentEnums, ~keysToIgnore=Context.keysToIgnore.contents)
   ->Option.flatMap(fields => {
     switch JSON.Classify.classify(fields) {
     | Object(fields) => fields->Dict.get("title")->Option.flatMap(JSON.Decode.string)
@@ -154,13 +155,12 @@ let findTitleInSchema = (
 
 let findEnumNameInSchema = (
   jsonSchema: JSON.t,
-  ~currentSelectedEnumValue: string,
+  ~parentEnums: array<string>,
   ~enumName: string,
   ~keys: list<string>,
 ): option<string> => {
-  let currentSelectedEnumValue =
-    currentSelectedEnumValue == "" ? enumName : currentSelectedEnumValue
-  switch jsonSchema->getAtPath(~path=keys, ~currentSelectedEnumValue, ~keysToIgnore=[]) {
+  Array.push(parentEnums, enumName)
+  switch jsonSchema->getAtPath(~path=keys, ~parentEnums, ~keysToIgnore=[]) {
   | Some(fields) =>
     switch JSON.Classify.classify(fields) {
     | Object(fields) =>
