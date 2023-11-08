@@ -67,6 +67,9 @@ let doc = CatalaExplain.generate(
         keysToIgnore: WebAssets.keysToIgnore,
         // The output to show as the result of the computation
         selectedOutput: WebAssets.selectedOutput,
+        // The URL of the exposed Catala program source code (used to redirect
+        // the user from the generated document to variable definitions)
+        sourceURL: "https:/example.com/sources",
     },
 )
 
