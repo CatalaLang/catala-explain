@@ -324,7 +324,7 @@ module Docx = {
     explanationSectionMap
     ->Map.entries
     ->Iterator.toArray
-    ->Array.sort(((id, _), (id', _)) => SectionId.compare(id, id'))
+    ->Array.toSorted(((id, _), (id', _)) => SectionId.compare(id, id'))
     ->Array.flatMap(((id, {scopeName, inputs, outputs, explanations, parent})) => {
       if id == SectionId.root {
         []

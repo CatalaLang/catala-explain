@@ -65,28 +65,28 @@ let loggedValueIsEmbeddable = (value: LoggedValue.t): bool => {
   value != Unembeddable
 }
 
-let loggedValueOrder = (value: LoggedValue.t): int => {
+let loggedValueOrder = (value: LoggedValue.t): float => {
   switch value {
-  | Array(_) => 3
-  | Struct(_) => 2
-  | Enum(_, (_, v)) if v != Unit => 1
-  | _ => 0
+  | Array(_) => 3.
+  | Struct(_) => 2.
+  | Enum(_, (_, v)) if v != Unit => 1.
+  | _ => 0.
   }
 }
 
-let loggedValueCompare = (a: LoggedValue.t, b: LoggedValue.t): int =>
-  loggedValueOrder(a) - loggedValueOrder(b)
+let loggedValueCompare = (a: LoggedValue.t, b: LoggedValue.t): float =>
+  loggedValueOrder(a) -. loggedValueOrder(b)
 
 let orderAndFilterEmpty = (values: array<LoggedValue.t>): array<LoggedValue.t> => {
   values
   ->Array.filter(val => !loggedValueIsEmbeddable(val))
-  ->Array.sort((a, b) => loggedValueOrder(a) - loggedValueOrder(b))
+  ->Array.toSorted((a, b) => loggedValueOrder(a) -. loggedValueOrder(b))
 }
 
 let getLawHeadingBreadcrumbsLink = (
   {filename, start_line, end_line, law_headings}: sourcePosition,
 ): ParagraphChild.t => {
-  let text = law_headings->Array.reverse->Array.joinWith(" > ")
+  let text = law_headings->Array.toReversed->Array.joinWith(" > ")
   let size = "7pt"
   switch Context.sourcesURL.contents {
   | Some(url) =>

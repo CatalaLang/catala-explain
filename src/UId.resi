@@ -3,7 +3,7 @@ module type Id = {
   let root: t
   let reset: unit => unit
   let fresh: unit => t
-  let compare: (t, t) => int
+  let compare: (t, t) => float
 }
 
 /** Basic integer identifiers. */

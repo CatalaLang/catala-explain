@@ -4,7 +4,7 @@ module type Id = {
   let root: t
   let reset: unit => unit
   let fresh: unit => t
-  let compare: (t, t) => int
+  let compare: (t, t) => float
 }
 
 module Int = {
@@ -21,6 +21,6 @@ module Int = {
       id := id.contents + 1
       id.contents
     }
-    let compare = (a, b) => a - b
+    let compare = (a, b) => (a - b)->Int.toFloat
   }
 }

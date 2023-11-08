@@ -236,7 +236,7 @@ let rec varDefToTableRow = (
         fields
         ->List.toArray
         ->Array.filter(((_, value)) => Utils.loggedValueIsEmbeddable(value))
-        ->Array.sort(((_, v1), (_, v2)) => Utils.loggedValueCompare(v1, v2))
+        ->Array.toSorted(((_, v1), (_, v2)) => Utils.loggedValueCompare(v1, v2))
         ->Array.flatMap(((field, value)) => {
           let varDefWithoutPos = value->Utils.createVarDef(~name=list{field})
 
@@ -296,7 +296,7 @@ let getTableRows = (
 ): array<TableRow.t> => {
   defs
   ->Array.filter(({value}) => Utils.loggedValueIsEmbeddable(value))
-  ->Array.sort((a, b) => Utils.loggedValueCompare(a.value, b.value))
+  ->Array.toSorted((a, b) => Utils.loggedValueCompare(a.value, b.value))
   ->Array.flatMap(varDef => {
     bgColorRef := bgColorRef.contents->getNextRowColor
     if varDef.value->Utils.isLitLoggedValue {

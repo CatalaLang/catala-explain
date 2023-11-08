@@ -39,7 +39,7 @@ let getTocSection = (explanationSectionMap: Explanations.sectionMap): SectionOpt
       explanationSectionMap
       ->Map.entries
       ->Iterator.toArray
-      ->Array.sort(((id, _), (id', _)) => Explanations.SectionId.compare(id, id'))
+      ->Array.toSorted(((id, _), (id', _)) => Explanations.SectionId.compare(id, id'))
       ->Array.filterMap(((id, {scopeName})) => {
         if id == Explanations.SectionId.root {
           None
