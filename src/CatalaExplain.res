@@ -158,7 +158,7 @@ let version = "0.2.2"
 let generate = (~events, ~userInputs, ~schema, ~opts) => {
   open Docx.Util.Types
 
-  Context.keysToIgnore := opts.keysToIgnore->Option.getWithDefault([])
+  Context.keysToIgnore := opts.keysToIgnore->Option.getOr([])
   Context.sourcesURL := opts.sourcesURL
   Context.selectedOutput := opts.selectedOutput
 
@@ -253,7 +253,7 @@ let generate = (~events, ~userInputs, ~schema, ~opts) => {
         },
         children: [
           p'({
-            text: opts.title->Option.getWithDefault("Explication individuelle du calcul"),
+            text: opts.title->Option.getOr("Explication individuelle du calcul"),
             heading: #Title,
             alignment: #center,
           }),
@@ -267,8 +267,22 @@ let generate = (~events, ~userInputs, ~schema, ~opts) => {
               left: Styles.solidBorder,
               right: Styles.solidBorder,
             },
-            spacing: {before: Styles.Spacing.large, after: Styles.Spacing.large},
+            spacing: {before: Styles.Spacing.large, after: Styles.Spacing.medium},
           }),
+          switch opts.creator {
+          | Some(creator) =>
+            p'({
+              alignment: #center,
+              spacing: {after: Styles.Spacing.medium},
+              children: [
+                TextRun.make'({
+                  text: `Créé depuis ${creator}`,
+                  italics: true,
+                }),
+              ],
+            })
+          | None => p("")
+          },
           p'({
             alignment: #both,
             children: [

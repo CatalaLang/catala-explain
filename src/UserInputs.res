@@ -6,9 +6,7 @@ open Docx
 let getCompleteEnumName = (~parentEnums, jsonSchema, enumName, currentPath) => {
   switch JSON.Classify.classify(enumName) {
   | String(s) =>
-    jsonSchema
-    ->findEnumNameInSchema(~enumName=s, ~keys=currentPath, ~parentEnums)
-    ->Option.getWithDefault(s)
+    jsonSchema->findEnumNameInSchema(~enumName=s, ~keys=currentPath, ~parentEnums)->Option.getOr(s)
   | _ => Js.Exn.raiseError("Enum name must be a string, got " ++ JSON.stringify(enumName))
   }
 }
@@ -44,7 +42,7 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
         ->Array.map(((key, value)) => {
           let newPath = path->List.concat(list{key})
           let name = schema->findTitleInSchema(~keys=newPath, ~parentEnums)
-          let name = name->Option.getWithDefault(key)
+          let name = name->Option.getOr(key)
 
           def(list{name}, value->parseValue(~path=newPath, ~parentEnums))
         })
@@ -89,8 +87,7 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
         ->Dict.toArray
         ->Array.map(((key, value)) => {
           let newPath = currentPath->List.concat(list{key})
-          let name =
-            schema->findTitleInSchema(~keys=newPath, ~parentEnums)->Option.getWithDefault(key)
+          let name = schema->findTitleInSchema(~keys=newPath, ~parentEnums)->Option.getOr(key)
 
           (name, value->parseValue(~path=newPath, ~parentEnums))
         })

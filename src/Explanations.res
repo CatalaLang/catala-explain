@@ -200,7 +200,7 @@ module Docx = {
           },
           TextRun.make("."),
         ])
-        ->Option.getWithDefault([]),
+        ->Option.getOr([]),
       }),
       p'({
         text: `La valeur a été calculée à partir des étapes suivantes : `,
