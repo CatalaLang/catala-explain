@@ -78,7 +78,6 @@ let rec parseExplanations = (events: array<event>, ctx: parseCtx): array<explana
     switch event {
     | VarComputation({fun_calls: Some(calls)} as varDef) =>
       calls
-      ->List.reverse
       ->List.map(({fun_name, fun_inputs, body, output}) => {
         makeNewSection(fun_name, fun_inputs, body, [output])
       })
