@@ -153,7 +153,7 @@ type options = {
   sourcesURL?: string,
 }
 
-let version = "0.2.2"
+let version = "0.2.5"
 
 let generate = (~events, ~userInputs, ~schema, ~opts) => {
   open Docx.Util.Types
