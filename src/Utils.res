@@ -32,19 +32,19 @@ let getSectionTitle = (~size=None, scopeName: information) => {
     let isLast = i == nbSegments - 1
     switch size {
     | Some(n) if isLast =>
-      TextRun.make'({
+      TextRun.makeWith({
         text: segment,
         size: `${n->Int.toString}pt`,
         italics: true,
         bold: true,
       })
     | Some(n) =>
-      TextRun.make'({
+      TextRun.makeWith({
         text: `${segment} > `,
         size: `${(n - 2)->Int.toString}pt`,
       })
     | None =>
-      TextRun.make'({
+      TextRun.makeWith({
         text: segment ++ (isLast ? "" : " > "),
         italics: isLast,
         bold: isLast,
@@ -92,7 +92,7 @@ let getLawHeadingBreadcrumbsLink = (
   | Some(url) =>
     ExternalHyperlink.make({
       children: [
-        TextRun.make'({
+        TextRun.makeWith({
           text,
           size,
           underline: {
@@ -102,7 +102,7 @@ let getLawHeadingBreadcrumbsLink = (
       ],
       link: `${url}#${filename}-${start_line->Int.toString}-${end_line->Int.toString}`,
     })
-  | None => TextRun.make'({text, size})
+  | None => TextRun.makeWith({text, size})
   }
 }
 

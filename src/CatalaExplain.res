@@ -12,7 +12,7 @@ let sections = [
   {name: "Explications", id: "explanations"},
 ]
 
-let getTocSection = (explanationSectionMap: Explanations.sectionMap): SectionOptions.t => {
+let getTocSection = (explanationSectionMap: Explanations.sectionMap): Document.sectionOptions => {
   {
     children: [p'({text: "Table des matières", heading: #Heading1})]->Array.concatMany([
       sections->Array.map(({name, id}) => {
@@ -23,7 +23,7 @@ let getTocSection = (explanationSectionMap: Explanations.sectionMap): SectionOpt
           },
           children: [
             TextRun.make(name),
-            TextRun.make'({children: [Tab.make(), TextRun.string("")]}),
+            TextRun.makeWith({children: [Tab.make(), TextRun.string("")]}),
             PageReference.make(id),
           ],
           heading: #Heading5,
@@ -51,14 +51,14 @@ let getTocSection = (explanationSectionMap: Explanations.sectionMap): SectionOpt
                 before: 50.0,
               },
               children: [
-                TextRun.make'({
+                TextRun.makeWith({
                   bold: true,
                   children: [Tab.make(), TextRun.string(`Étape n°${id->Int.toString} : `)],
                 }),
               ]->Array.concatMany([
                 scopeName->Utils.getSectionTitle(~size=Some(11)),
                 [
-                  TextRun.make'({children: [Tab.make()]}),
+                  TextRun.makeWith({children: [Tab.make()]}),
                   id->Utils.getBookmarkId->PageReference.make,
                 ],
               ]),
@@ -90,13 +90,13 @@ let getSectionHeading = i => {
     children: [
       Bookmark.make({
         id,
-        children: [TextRun.make'({text: name})],
+        children: [TextRun.makeWith({text: name})],
       }),
     ],
   })
 }
 
-let getUserInputDocSection = (~userInputs, ~schema): SectionOptions.t => {
+let getUserInputDocSection = (~userInputs, ~schema): Document.sectionOptions => {
   {
     children: [
       getSectionHeading(0),
@@ -114,7 +114,7 @@ la détermination du résultat du calcul.",
   }
 }
 
-let getResultDocSection = (explanationSectionMap): SectionOptions.t => {
+let getResultDocSection = (explanationSectionMap): Document.sectionOptions => {
   {
     children: [getSectionHeading(1)]->Array.concat(
       explanationSectionMap->Explanations.Docx.outputToFileChilds,
@@ -124,7 +124,7 @@ let getResultDocSection = (explanationSectionMap): SectionOptions.t => {
 
 let getExplanationsDocSection = (
   explanationSectionMap: Explanations.sectionMap,
-): SectionOptions.t => {
+): Document.sectionOptions => {
   {
     children: [
       getSectionHeading(2),
@@ -134,7 +134,7 @@ let getExplanationsDocSection = (
         children: [
           TextRun.make("Vous trouverez ci-dessous les explications détaillées du calcul."),
           TextRun.make(" Pour chaque "),
-          TextRun.make'({text: "étape", italics: true}),
+          TextRun.makeWith({text: "étape", italics: true}),
           TextRun.make(
             " vous trouverez une explication de la règle de calcul utilisée, ainsi que les valeurs des variables utilisées et de potentielles sous-étapes nécessaires.",
           ),
@@ -239,7 +239,7 @@ let generate = (~events, ~userInputs, ~schema, ~opts) => {
               p'({
                 alignment: #right,
                 children: [
-                  TextRun.make'({
+                  TextRun.makeWith({
                     children: [
                       TextRun.pageNumber(#CURRENT),
                       TextRun.string(" / "),
@@ -275,7 +275,7 @@ let generate = (~events, ~userInputs, ~schema, ~opts) => {
               alignment: #center,
               spacing: {after: Styles.Spacing.medium},
               children: [
-                TextRun.make'({
+                TextRun.makeWith({
                   text: `Créé depuis ${creator}`,
                   italics: true,
                 }),

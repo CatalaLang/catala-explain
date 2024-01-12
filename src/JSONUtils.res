@@ -78,7 +78,7 @@ let getReference = (json, fields) => {
       : fields
 
   switch obj->Dict.get("$ref") {
-  | Some(ref) => ref->JSON.Decode.string->Option.flatMap(json->getDefinition(_))
+  | Some(ref) => ref->JSON.Decode.string->Option.flatMap(getDefinition(json, _))
   | None => Js.Exn.raiseError("See previous message :)")
   }
 }

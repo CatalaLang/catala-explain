@@ -7,44 +7,44 @@ open DSFRColors
 let litLoggedValueToParagraphChild = (val: LoggedValue.t): ParagraphChild.t => {
   switch val {
   | Bool(b) =>
-    TextRun.make'({
+    TextRun.makeWith({
       text: b ? "oui" : "non",
       style: "BooleanLiteral",
     })
   | Money(m) =>
-    TextRun.make'({
+    TextRun.makeWith({
       text: `${m->Float.toString}€`,
       style: "NumberLiteral",
     })
   | Decimal(f) =>
-    TextRun.make'({
+    TextRun.makeWith({
       text: f->Float.toString,
       style: "NumberLiteral",
     })
   | Integer(i) =>
-    TextRun.make'({
+    TextRun.makeWith({
       text: i->Int.toString,
       style: "NumberLiteral",
     })
   | Date(d) =>
-    TextRun.make'({
+    TextRun.makeWith({
       text: d
       ->Date.fromString
       ->Date.toLocaleDateStringWithLocaleAndOptions("fr-FR", {dateStyle: #long}),
       style: "DateLiteral",
     })
   | Duration(d) =>
-    TextRun.make'({
+    TextRun.makeWith({
       text: d->Utils.durationToString,
       style: "DateLiteral",
     })
   | Enum(_, (name, Unit)) =>
-    TextRun.make'({
+    TextRun.makeWith({
       text: name,
       style: "EnumLiteral",
     })
   | Array([]) =>
-    TextRun.make'({
+    TextRun.makeWith({
       text: "aucun",
       style: "ArrayLiteral",
     })
@@ -71,7 +71,7 @@ let getNormalTableCell = (
 }
 
 let getNormalTableCellParagraph = (~alignment: AlignmentType.t=#left, children) => {
-  Paragraph.make'({
+  Paragraph.makeWith({
     spacing: {before: 40.0, after: 40.0},
     alignment,
     children,
@@ -216,11 +216,11 @@ let rec varDefToTableRow = (
             ~bgColor,
             [
               getNormalTableCellParagraph([
-                TextRun.make'({text: name->Utils.lastExn, bold: true}),
+                TextRun.makeWith({text: name->Utils.lastExn, bold: true}),
                 if structName == list{} {
                   TextRun.make("")
                 } else {
-                  TextRun.make'({
+                  TextRun.makeWith({
                     text: ` (de type ${structName->List.toArray->Array.joinWith(".")})`,
                     italics: true,
                     bold: true,

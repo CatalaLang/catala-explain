@@ -1,3 +1,5 @@
+@@uncurried
+
 open Utils
 open JSONUtils
 open CatalaRuntime
@@ -19,8 +21,7 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
     name,
     value,
   }
-
-  let rec parse = (~parentEnums: array<string>=[], ~path: list<string>=list{}, json) => {
+  let rec parse = (json, path: list<string>, ~parentEnums: array<string>=[]) => {
     switch JSON.Classify.classify(json) {
     | Object(items) =>
       switch (items->Dict.get("kind"), items->Dict.get("payload")) {
@@ -33,7 +34,7 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
       | (Some(kindVal), Some(payload)) => [
           def(
             list{schema->getCompleteEnumName(kindVal, path, ~parentEnums)},
-            payload->parseValue(~path, ~parentEnums),
+            payload->parseValue(path, ~parentEnums),
           ),
         ]
       | (None, None) =>
@@ -44,14 +45,18 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
           let name = schema->findTitleInSchema(~keys=newPath, ~parentEnums)
           let name = name->Option.getOr(key)
 
-          def(list{name}, value->parseValue(~path=newPath, ~parentEnums))
+          def(list{name}, value->parseValue(newPath, ~parentEnums))
         })
       | _ => failwith("invalid user inputs in [parse]")
       }
     | _ => failwith("invalid user inputs in [parse]")
     }
   }
-  and parseValue = (~parentEnums, ~path, json): LoggedValue.t => {
+  and parseValue = (
+    json: JSON.t,
+    path: list<string>,
+    ~parentEnums: array<string>,
+  ): LoggedValue.t => {
     switch JSON.Classify.classify(json) {
     | Object(items) =>
       switch (items->Dict.get("kind"), items->Dict.get("payload")) {
@@ -70,7 +75,7 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
       | (None, Some(_)) =>
         Js.Exn.raiseError("Should not contain a 'payload' without a specified 'kind'")
       }
-    | Array(items) => Array(items->Array.map(parseValue(_, ~path, ~parentEnums)))
+    | Array(items) => Array(items->Array.map(parseValue(_, path, ~parentEnums)))
     | String(s) if s->isDate => Date(s)
     | String(s) => Duration(s)
     | Bool(b) => Bool(b)
@@ -78,7 +83,7 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
     | Null => Unit
     }
   }
-  and parseFields = (~parentEnums, json, currentPath): list<(string, LoggedValue.t)> => {
+  and parseFields = (json, currentPath, ~parentEnums): list<(string, LoggedValue.t)> => {
     switch JSON.Classify.classify(json) {
     | Object(items) =>
       switch (items->Dict.get("kind"), items->Dict.get("payload")) {
@@ -89,7 +94,7 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
           let newPath = currentPath->List.concat(list{key})
           let name = schema->findTitleInSchema(~keys=newPath, ~parentEnums)->Option.getOr(key)
 
-          (name, value->parseValue(~path=newPath, ~parentEnums))
+          (name, parseValue(value, newPath, ~parentEnums))
         })
         ->List.fromArray
       | _ => Js.Exn.raiseError("Should not contain 'kind' or 'payload'")
@@ -98,7 +103,7 @@ let parseVarDefs = (~json, ~schema): array<var_def> => {
     }
   }
 
-  parse(json)
+  parse(json, list{})
 }
 
 let toTable = (inputs: array<var_def>) => {
@@ -106,10 +111,10 @@ let toTable = (inputs: array<var_def>) => {
   let maxDepth = inputs->Utils.getMaxDepth
   let bgColor = #blue
   let contentRows = inputs->TableUtils.getTableRows(~bgColorRef=ref(bgColor), ~maxDepth)
-  let headingParagraph = Paragraph.make'({
+  let headingParagraph = Paragraph.makeWith({
     spacing: {before: 80.0, after: 80.0},
     children: [
-      TextRun.make'({
+      TextRun.makeWith({
         bold: true,
         size: "10pt",
         text: headingText ++ " ",

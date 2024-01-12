@@ -13,7 +13,7 @@
       "in-source": true
     }
   ],
-  "suffix": ".bs.js",
+  "suffix": ".res.js",
   "refmt": 3,
   "jsx": { "version": 4, "mode": "classic" },
   "bs-dependencies": [

@@ -127,7 +127,7 @@ module Docx = {
     let bookmarkId = Utils.getBookmarkId(id)
     let run = text =>
       switch size {
-      | Some(n) => TextRun.make'({text, size: `${n->Int.toString}pt`})
+      | Some(n) => TextRun.makeWith({text, size: `${n->Int.toString}pt`})
       | None => TextRun.make(text)
       }
 
@@ -146,7 +146,7 @@ module Docx = {
     Bookmark.make({
       id: `section-${id->Int.toString}`,
       children: [
-        TextRun.make'({
+        TextRun.makeWith({
           text: `Étape n°${id->Int.toString} : `,
         }),
       ]->Array.concat(scopeName->Utils.getSectionTitle(~size=Some(18))),
@@ -187,7 +187,7 @@ module Docx = {
         children: output
         ->Option.map(output => [
           TextRun.make(`La valeur calculée est `),
-          TextRun.make'({
+          TextRun.makeWith({
             text: output.name->List.reverse->List.headExn,
             style: "VariableName",
           }),
@@ -217,10 +217,10 @@ module Docx = {
     ~contentRows,
   ) => {
     let textHeadingStyle: TextRun.options = {bold: true, size: "10pt"}
-    let headingParagraph = Paragraph.make'({
+    let headingParagraph = Paragraph.makeWith({
       spacing: {before: 80.0, after: 80.0},
       children: [
-        TextRun.make'({
+        TextRun.makeWith({
           ...textHeadingStyle,
           text: headingText ++ " ",
         }),
